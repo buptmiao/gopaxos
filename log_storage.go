@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 // default be true
 type writeOptions bool

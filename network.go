@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 type Network interface {
 	RunNetWork()

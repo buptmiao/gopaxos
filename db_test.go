@@ -1,1 +1,1 @@
-package paxos_test
+package gopaxos_test

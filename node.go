@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 //All the function in class Node is thread safe!
 type Node interface {

@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 import (
 	"github.com/docker/docker/pkg/random"

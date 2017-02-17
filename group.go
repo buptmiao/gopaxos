@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 type group struct {
 	comm     *communicate

@@ -1,4 +1,4 @@
-package paxos
+package gopaxos
 
 import (
 	"github.com/pkg/errors"
