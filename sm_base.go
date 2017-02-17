@@ -2,7 +2,7 @@ package paxos
 
 import (
 	"encoding/binary"
-	"github.com/buptmiao/px/paxospb"
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 type batchSMCtx struct {

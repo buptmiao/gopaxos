@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/buptmiao/px/paxospb"
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 type masterOperatorType uint32

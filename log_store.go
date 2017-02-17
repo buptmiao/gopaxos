@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/buptmiao/px/paxospb"
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 type logStoreLogger struct {

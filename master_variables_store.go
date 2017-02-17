@@ -1,6 +1,6 @@
 package paxos
 
-import "github.com/buptmiao/px/paxospb"
+import "github.com/buptmiao/gopaxos/paxospb"
 
 type masterVariableStore struct {
 	logStorage LogStorage

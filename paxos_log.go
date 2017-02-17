@@ -1,7 +1,7 @@
 package paxos
 
 import (
-	"github.com/buptmiao/px/paxospb"
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 type paxosLog struct {
