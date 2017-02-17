@@ -1,0 +1,20 @@
+syntax = "proto2";
+package paxospb;
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.marshaler_all) = true;
+
+//protoc --gogofaster_out=. -I. -I${GOPATH}/src  -I${GOPATH}/src/github.com/gogo/protobuf/protobuf master_sm.proto
+
+
+message MasterOperator
+{
+    required uint64 nodeid = 1;
+    required uint64 version = 2;
+    required int32 timeout = 3;
+    required uint32 operator = 4;
+    required uint32 sid = 5;
+    optional uint64 lastversion = 6;
+};

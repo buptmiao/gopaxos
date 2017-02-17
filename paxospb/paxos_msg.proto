@@ -1,0 +1,93 @@
+syntax = "proto2";
+package paxospb;
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.marshaler_all) = true;
+
+//protoc --gogofaster_out=. -I. -I${GOPATH}/src  -I${GOPATH}/src/github.com/gogo/protobuf/protobuf paxos_msg.proto
+
+message Header
+{
+    required uint64 gid = 1 [(gogoproto.nullable) = false];
+    required uint64 rid = 2 [(gogoproto.nullable) = false];
+    required int32 cmdid = 3 [(gogoproto.nullable) = false];
+    optional int32 version = 4 [(gogoproto.nullable) = false];
+};
+
+message PaxosMsg
+{
+    required int32 MsgType = 1 [(gogoproto.nullable) = false];
+    optional uint64 InstanceID = 2 [(gogoproto.nullable) = false];
+    optional uint64 NodeID = 3 [(gogoproto.nullable) = false];
+    optional uint64 ProposalID = 4 [(gogoproto.nullable) = false];
+    optional uint64 ProposalNodeID = 5 [(gogoproto.nullable) = false];
+    optional bytes Value = 6 [(gogoproto.nullable) = true];
+    optional uint64 PreAcceptID = 7 [(gogoproto.nullable) = false];
+    optional uint64 PreAcceptNodeID = 8 [(gogoproto.nullable) = false];
+    optional uint64 RejectByPromiseID = 9 [(gogoproto.nullable) = false];
+    optional uint64 NowInstanceID = 10 [(gogoproto.nullable) = false];
+    optional uint64 MinChosenInstanceID = 11 [(gogoproto.nullable) = false];
+    optional uint32 LastChecksum = 12 [(gogoproto.nullable) = false];
+    optional uint32 Flag = 13 [(gogoproto.nullable) = false];
+    optional bytes SystemVariables = 14 [(gogoproto.nullable) = true];
+    optional bytes MasterVariables = 15 [(gogoproto.nullable) = true];
+};
+
+message CheckpointMsg
+{
+    required int32 MsgType = 1 [(gogoproto.nullable) = false];
+    required uint64 NodeID = 2 [(gogoproto.nullable) = false];
+    optional int32 Flag = 3 [(gogoproto.nullable) = false];
+    required uint64 UUID = 4 [(gogoproto.nullable) = false];
+    required uint64 Sequence = 5 [(gogoproto.nullable) = false];
+    optional uint64 CheckpointInstanceID = 6 [(gogoproto.nullable) = false];
+    optional uint32 Checksum = 7 [(gogoproto.nullable) = false];
+    optional string FilePath = 8 [(gogoproto.nullable) = false];
+    optional int64 SMID = 9 [(gogoproto.nullable) = false];
+    optional uint64 Offset = 10 [(gogoproto.nullable) = false];
+    optional bytes Buffer = 11 [(gogoproto.nullable) = true];
+}
+
+message AcceptorStateData
+{
+    required uint64 InstanceID = 1 [(gogoproto.nullable) = false];
+    required uint64 PromiseID = 2 [(gogoproto.nullable) = false];
+    required uint64 PromiseNodeID = 3 [(gogoproto.nullable) = false];
+    required uint64 AcceptedID = 4 [(gogoproto.nullable) = false];
+    required uint64 AcceptedNodeID = 5 [(gogoproto.nullable) = false];
+    required bytes AcceptedValue = 6 [(gogoproto.nullable) = true];
+    required uint32 Checksum = 7 [(gogoproto.nullable) = false];
+};
+
+message PaxosNodeInfo
+{
+    required uint64 Rid = 1 [(gogoproto.nullable) = false];
+    required uint64 Nodeid = 2 [(gogoproto.nullable) = false];
+};
+
+message SystemVariables
+{
+    required uint64 Gid = 1 [(gogoproto.nullable) = false];
+    repeated PaxosNodeInfo MemberShip = 2 [(gogoproto.nullable) = false];
+    required uint64 Version = 3 [(gogoproto.nullable) = false];
+};
+
+message MasterVariables
+{
+    required uint64 MasterNodeid = 1 [(gogoproto.nullable) = false];
+    required uint64 Version = 2 [(gogoproto.nullable) = false];
+    required uint32 LeaseTime = 3 [(gogoproto.nullable) = false];
+};
+
+message PaxosValue
+{
+    required int64 SMID = 1 [(gogoproto.nullable) = false];
+    required bytes Value = 2 [(gogoproto.nullable) = true];
+};
+
+message BatchPaxosValues
+{
+    repeated PaxosValue Values = 1;
+};
