@@ -214,7 +214,8 @@ func (d *db) get(instanceID uint64) (string, error) {
 	}
 	sFileID, err := d.getFromLevelDB(instanceID)
 	if err != nil {
-		return "", err
+		lPLG1Err(d.groupIdx, "get from level db failed", err)
+		return "", ErrNotFoundFromStorage
 	}
 	value, fileInstanceID, err := d.fileIDToValue(sFileID)
 	if err != nil {
@@ -395,7 +396,7 @@ func (d *db) getMinChosenInstanceID() (uint64, error) {
 
 	value, err := d.getFromLevelDB(getMinKey)
 	if err != nil && err != leveldb.ErrNotFound {
-		lPLG1Err(d.groupIdx, "fail, ret %v", err)
+		lPLG1Err(d.groupIdx, "fail, error: %v", err)
 		return 0, err
 	}
 

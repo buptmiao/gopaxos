@@ -638,7 +638,10 @@ func (i *instance) checksumLogic(paxosMsg *paxospb.PaxosMsg) {
 			i.getLastChecksum(), paxosMsg.GetLastChecksum())
 		getBPInstance().ChecksumLogicFail()
 	}
-	// paxosMsg.GetLastChecksum() == i.getLastChecksum()
+
+	if paxosMsg.GetLastChecksum() != i.getLastChecksum() {
+		lPLGErr(i.conf.groupIdx, "unexpected lastchecksum")
+	}
 }
 
 func (i *instance) getInstanceValue(instanceID uint64) ([]byte, int64, error) {
