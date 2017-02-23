@@ -114,3 +114,7 @@ func makeOpValue(id nodeId, version uint64, timeout int, op masterOperatorType) 
 
 	return oper.Marshal()
 }
+
+func getGid(id uint64) uint64 {
+	return (id ^ rand.Uint32()) + rand.Uint32()
+}

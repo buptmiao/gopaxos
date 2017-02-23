@@ -76,7 +76,7 @@ const (
 	msgType_PaxosLearner_ProposerSendSuccess
 	msgType_PaxosProposal_SendNewValue
 	msgType_PaxosLearner_SendNowInstanceID
-	msgType_PaxosLearner_ComfirmAskforLearn
+	msgType_PaxosLearner_ConfirmAskforLearn
 	msgType_PaxosLearner_SendLearnValue_Ack
 	msgType_PaxosLearner_AskforCheckpoint
 	msgType_PaxosLearner_OnAskforCheckpoint
@@ -140,8 +140,14 @@ var (
 	errInstanceIDSizeWrong    = errors.New("instance id size wrong")
 	errGroupCountNotProper    = errors.New("group count wrong")
 
-	errMaxInstanceIDNotExist = errors.New("max instance id not exists")
-	errMsgQueueFull          = errors.New("msg queue is full")
-	errVersionNotInit        = errors.New("version not init")
-	errGidNotSame            = errors.New("gid not same")
+	errMaxInstanceIDNotExist        = errors.New("max instance id not exists")
+	errMsgQueueFull                 = errors.New("msg queue is full")
+	errVersionNotInit               = errors.New("version not init")
+	errGidNotSame                   = errors.New("gid not same")
+	errCheckpointInstanceID         = errors.New("checkpoint instanceID is not correct")
+	errSmallThanMinChosenInstanceID = errors.New("small than min chosen instanceid")
+	errInstanceExecuteFailed        = errors.New("failure in instance execution")
+
+	errGetInstanceValueNotExist  = errors.New("paxos getinstancevalue value not exist")
+	errGetInstanceValueNotChosen = errors.New("paxos getinstancevalue value not chosen yet")
 )
