@@ -3,9 +3,19 @@ package gopaxos
 import "github.com/buptmiao/gopaxos/paxospb"
 
 type acceptor struct {
+	base
 }
 
 func newAcceptor(conf *config, tran MsgTransport, i *instance, ls LogStorage) *acceptor {
+	ret := &acceptor{}
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// base methods
+///////////////////////////////////////////////////////////////////////////////
+
+func (a *acceptor) getInstanceID() uint64 {
 
 }
 
@@ -13,11 +23,51 @@ func (a *acceptor) newInstance() {
 
 }
 
-func (a *acceptor) init() error {
+func (a *acceptor) packMsg(paxosMsg *paxospb.PaxosMsg) ([]byte, error) {
 
 }
 
-func (a *acceptor) getInstanceID() uint64 {
+func (a *acceptor) packCheckpointMsg(checkpointMsg *paxospb.CheckpointMsg) ([]byte, error) {
+
+}
+
+func (a *acceptor) getLastChecksum() uint32 {
+
+}
+
+func (a *acceptor) packBaseMsg(body []byte, cmd int) []byte {
+
+}
+
+func (a *acceptor) setAsTestMode() {
+
+}
+
+func (a *acceptor) sendPaxosMessage(sendToNodeID nodeId, paxosMsg *paxospb.PaxosMsg, protocol TransportType) error {
+
+}
+
+func (a *acceptor) broadcastMessage(paxosMsg *paxospb.PaxosMsg, runSelfFirst int, protocol TransportType) error {
+
+}
+
+func (a *acceptor) broadcastMessageToFollower(paxosMsg *paxospb.PaxosMsg, protocol TransportType) error {
+
+}
+
+func (a *acceptor) broadcastMessageTempNode(paxosMsg *paxospb.PaxosMsg, protocol TransportType) error {
+
+}
+
+func (a *acceptor) sendCheckpointMessage(sendToNodeID nodeId, checkpointMsg *paxospb.CheckpointMsg, protocol TransportType) error {
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// respective methods
+///////////////////////////////////////////////////////////////////////////////
+
+func (a *acceptor) init() error {
 
 }
 

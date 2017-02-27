@@ -6,24 +6,21 @@ import (
 )
 
 type instance struct {
-	conf     *config
-	comm     MsgTransport
-	smFac    *smFac
-	loop     *ioLoop
-	acceptor *acceptor
-	learner  *learner
-	proposer *proposer
-	paxosLog *paxosLog
-
+	conf          *config
+	comm          MsgTransport
+	smFac         *smFac
+	loop          *ioLoop
+	acceptor      *acceptor
+	learner       *learner
+	proposer      *proposer
+	paxosLog      *paxosLog
 	lastChecksum  uint32
 	commitCtx     *commitCtx
 	commitTimerID uint32
 	committer     *committer
-
 	checkpointMgr *checkpointMgr
-
-	timeStat timeStat
-	opt      *Options
+	timeStat      timeStat
+	opt           *Options
 }
 
 func newInstance(conf *config, ls LogStorage, tran MsgTransport, opt *Options) *instance {

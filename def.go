@@ -155,5 +155,7 @@ var (
 
 	errCheckpointSenderEnded = errors.New("checkpoint sender has beed ended")
 
-	errCheckpointAck = errors.New("checkpoint sender ack check error")
+	errCheckpointAck    = errors.New("checkpoint sender ack check error")
+	errHeaderLenTooLong = errors.New("headerlen too long")
+	errChecksumMiss     = errors.New("checksum size error")
 )
