@@ -149,4 +149,11 @@ var (
 	errGetInstanceValueNotExist     = errors.New("paxos getinstancevalue value not exist")
 	errGetInstanceValueNotChosen    = errors.New("paxos getinstancevalue value not chosen yet")
 	errCheckpointMissMajority       = errors.New("Need more other tell us need to askforcheckpoint")
+	errMsgNotValid                  = errors.New("msg not valid")
+	errMsgSequenceWrong             = errors.New("msg sequence wrong")
+	errFileOffsetMismatch           = errors.New("file offset mismatch")
+
+	errCheckpointSenderEnded = errors.New("checkpoint sender has beed ended")
+
+	errCheckpointAck = errors.New("checkpoint sender ack check error")
 )

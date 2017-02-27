@@ -286,8 +286,8 @@ func (s *systemVSM) ExecuteForCheckpoint(groupIdx int, instanceID uint64, paxosV
 	return true
 }
 
-func (s *systemVSM) GetCheckpointState(groupIdx int, dirPath string) ([]string, error) {
-	return nil, nil
+func (s *systemVSM) GetCheckpointState(groupIdx int) (string, []string, error) {
+	return nil, nil, nil
 }
 
 func (s *systemVSM) LoadCheckpointState(groupIdx int, checkpointTmpFileDirPath string, fileList []string, checkpointInstanceID uint64) error {

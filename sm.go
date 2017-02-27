@@ -44,7 +44,7 @@ type StateMachine interface {
 
 	//dirPath is checkpoint data root dir path.
 	//vecFileList is the relative path of the sDirPath.
-	GetCheckpointState(groupIdx int, dirPath string) ([]string, error)
+	GetCheckpointState(groupIdx int) (string, []string, error)
 
 	UnLockCheckpointState()
 

@@ -99,7 +99,7 @@ func (m *masterStateMachine) NeedCallBeforePropose() bool {
 	return true
 }
 
-func (m *masterStateMachine) GetCheckpointState(groupIdx int, dirPath string) ([]string, error) {
+func (m *masterStateMachine) GetCheckpointState(groupIdx int) (string, []string, error) {
 	return nil, nil
 }
 
