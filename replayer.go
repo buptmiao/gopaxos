@@ -33,6 +33,7 @@ func (r *rePlayer) stop() {
 	r.isEnd = true
 	if r.quit != nil {
 		<-r.quit
+		r.quit = nil
 	}
 }
 
@@ -57,7 +58,6 @@ func (r *rePlayer) run() {
 		if r.isEnd {
 			lPLGHead(r.conf.groupIdx, "Checkpoint.Replayer [END]")
 			close(r.quit)
-			r.quit = nil
 			return
 		}
 

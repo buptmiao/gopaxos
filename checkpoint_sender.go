@@ -57,6 +57,7 @@ func (c *checkpointSender) stop() {
 		c.isEnd = true
 		if c.quit != nil {
 			<-c.quit
+			c.quit = nil
 		}
 	}
 }
@@ -79,7 +80,6 @@ func (c *checkpointSender) run() {
 		if c.isEnd {
 			c.isEnded = true
 			close(c.quit)
-			c.quit = nil
 			return
 		}
 

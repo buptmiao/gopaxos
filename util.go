@@ -118,3 +118,50 @@ func makeOpValue(id nodeId, version uint64, timeout int, op masterOperatorType) 
 func getGid(id uint64) uint64 {
 	return (id ^ rand.Uint32()) + rand.Uint32()
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// serial lock
+//
+///////////////////////////////////////////////////////////////////////////////
+type serialLock struct {
+	mu   sync.Mutex
+	cond *sync.Cond
+}
+
+func newSerialLock() *serialLock {
+	return &serialLock{
+		mu:   sync.Mutex{},
+		cond: sync.NewCond(sync.Mutex{}),
+	}
+}
+
+func (s *serialLock) lock() {
+	s.mu.Lock()
+}
+
+func (s *serialLock) unlock() {
+	s.mu.Unlock()
+}
+
+func (s *serialLock) wait() {
+	s.cond.Wait()
+}
+
+func (s *serialLock) interrupt() {
+	s.cond.Signal()
+}
+
+// timeout return false.
+func (s *serialLock) waitTime(timeout time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		s.cond.Wait()
+		close(done)
+	}()
+	select {
+	case <-time.After(timeout):
+		return false
+	case <-done:
+		return true
+	}
+}

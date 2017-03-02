@@ -44,6 +44,7 @@ func (c *cleaner) stop() {
 	c.isEnd = true
 	if c.isStart && c.quit != nil {
 		<-c.quit
+		c.quit = nil
 	}
 }
 
@@ -81,7 +82,6 @@ func (c *cleaner) run() {
 		if c.isEnd {
 			lPLGHead(c.conf.groupIdx, "Checkpoint.Cleaner [END]")
 			close(c.quit)
-			c.quit = nil
 			return
 		}
 

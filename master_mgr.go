@@ -50,6 +50,7 @@ func (m *masterMgr) stopMaster() {
 	if m.isStarted {
 		m.isEnd = true
 		<-m.quit
+		m.quit = nil
 	}
 }
 
@@ -63,7 +64,7 @@ func (m *masterMgr) run() {
 
 	for {
 		if m.isEnd {
-			m.quit <- struct{}{}
+			close(m.quit)
 			return
 		}
 

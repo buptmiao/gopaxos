@@ -54,10 +54,11 @@ func (b base) setInstanceID(instanceID uint64) {
 	b.instanceID = instanceID
 }
 
-func (b base) newInstance() {
-	b.instanceID++
-	b.initForNewPaxosInstance()
-}
+// it must be implemented by derived struct
+//func (b base) newInstance() {
+//	b.instanceID++
+//	b.initForNewPaxosInstance()
+//}
 
 func (b base) getLastChecksum() uint32 {
 	return b.instance.getLastChecksum()

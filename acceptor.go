@@ -4,6 +4,7 @@ import "github.com/buptmiao/gopaxos/paxospb"
 
 type acceptor struct {
 	base
+	state *acceptorState
 }
 
 func newAcceptor(conf *config, tran MsgTransport, i *instance, ls LogStorage) *acceptor {
@@ -92,8 +93,47 @@ func (a *acceptor) onAccept(paxosMsg *paxospb.PaxosMsg) {
 }
 
 type acceptorState struct {
+	promiseBallot  *ballotNumber
+	acceptedBallot *ballotNumber
+	acceptedValue  []byte
+	checksum       uint32
+	conf           *config
+	paxosLog       *paxosLog
+	syncTimes      int
+}
+
+func newAcceptorState(conf *config, ls LogStorage) *acceptorState {
+
+}
+
+func (a *acceptorState) init() {
+
 }
 
 func (a *acceptorState) getPromiseBallot() *ballotNumber {
+
+}
+
+func (a *acceptorState) getAcceptedBallot() *ballotNumber {
+
+}
+
+func (a *acceptorState) getAcceptedValue() []byte {
+
+}
+
+func (a *acceptorState) setAcceptedValue(value []byte) {
+
+}
+
+func (a *acceptorState) getChecksum() uint32 {
+
+}
+
+func (a *acceptorState) persist(instanceID uint64, lastChecksum uint32) error {
+
+}
+
+func (a *acceptorState) load() (uint64, error) {
 
 }

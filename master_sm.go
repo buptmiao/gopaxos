@@ -112,7 +112,7 @@ func (m *masterStateMachine) LockCheckpointState() error {
 }
 
 func (m *masterStateMachine) UnLockCheckpointState() {
-
+	return
 }
 
 func (m *masterStateMachine) init() error {
