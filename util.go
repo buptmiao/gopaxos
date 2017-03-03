@@ -1,6 +1,7 @@
 package gopaxos
 
 import (
+	"hash/crc32"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -164,4 +165,12 @@ func (s *serialLock) waitTime(timeout time.Duration) bool {
 	case <-done:
 		return true
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// crc32
+//
+///////////////////////////////////////////////////////////////////////////////
+func crc(crc uint32, data []byte) uint32 {
+	return crc32.Update(crc, crc32.IEEETable, data)
 }

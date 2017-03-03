@@ -1,11 +1,10 @@
 package gopaxos
 
 import (
-	"hash/crc32"
-
-	"github.com/buptmiao/gopaxos/paxospb"
 	"os"
 	"time"
+
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 // learner implements the interface base.
@@ -64,7 +63,6 @@ func (l *learner) newInstance() {
 ///////////////////////////////////////////////////////////////////////////////
 // respective methods
 ///////////////////////////////////////////////////////////////////////////////
-
 func (l *learner) startLearnerSender() {
 	l.learnerSender.start()
 }
@@ -109,7 +107,7 @@ func (l *learner) resetAskForLearnNoop(timeout int) {
 		l.loop.removeTimer(l.askForLearnNoopTimerID)
 	}
 
-	l.loop.addTimer(timeout, timer_Learner_Askforlearn_noop, l.askForLearnNoopTimerID)
+	l.loop.addTimer(timeout, timer_Learner_AskForLearn_Noop, l.askForLearnNoopTimerID)
 }
 
 func (l *learner) askForLearnNoop(isStart bool) {
@@ -422,7 +420,7 @@ func (l *learner) onProposerSendSuccess(paxosMsg *paxospb.PaxosMsg) {
 		return
 	}
 
-	if l.acceptor.getAcceptorState().getAcceptedBallot() == nil {
+	if l.acceptor.getAcceptorState().getAcceptedBallot().isnull() {
 		//Not accept any yet.
 		getBPInstance().OnProposerSendSuccessNotAcceptYet()
 		lPLGDebug(l.conf.groupIdx, "I haven't accpeted any proposal")
@@ -704,7 +702,7 @@ func (l *learnerState) learnValue(instanceID uint64, learnedBallot *ballotNumber
 	if instanceID > 0 && lastChecksum == 0 {
 		l.newChecksum = 0
 	} else if len(value) > 0 {
-		l.newChecksum = crc32.ChecksumIEEE(value)
+		l.newChecksum = crc(lastChecksum, value)
 	}
 
 	state := &paxospb.AcceptorStateData{}

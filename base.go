@@ -3,7 +3,6 @@ package gopaxos
 import (
 	"encoding/binary"
 	"github.com/buptmiao/gopaxos/paxospb"
-	"hash/crc32"
 )
 
 type ballotNumber struct {
@@ -16,6 +15,37 @@ func newBallotNumber(pid uint64, nid nodeId) *ballotNumber {
 		proposalID: pid,
 		nodeID:     nid,
 	}
+}
+
+func (b *ballotNumber) isnull() bool {
+	return b.proposalID == 0
+}
+
+func (b *ballotNumber) reset() {
+	b.proposalID = 0
+	b.nodeID = 0
+}
+
+func (b *ballotNumber) gte(other *ballotNumber) bool {
+	if b.proposalID == other.proposalID {
+		return b.nodeID >= other.nodeID
+	}
+	return b.proposalID >= other.proposalID
+}
+
+func (b *ballotNumber) ne(other *ballotNumber) bool {
+	return b.proposalID != other.proposalID || b.nodeID != other.nodeID
+}
+
+func (b *ballotNumber) equal(other *ballotNumber) bool {
+	return *b == *other
+}
+
+func (b *ballotNumber) gt(other *ballotNumber) bool {
+	if b.proposalID == other.proposalID {
+		return b.nodeID > other.nodeID
+	}
+	return b.proposalID > other.proposalID
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,7 +144,7 @@ func (b base) packBaseMsg(body []byte, cmd int32) []byte {
 	buf = append(buf, headerBuf...)
 	buf = append(buf, body...)
 
-	checksum := crc32.ChecksumIEEE(buf)
+	checksum := crc(0, buf)
 	checksumBuf := make([]byte, checksum_len)
 	binary.LittleEndian.PutUint32(checksumBuf, checksum)
 
@@ -240,7 +270,7 @@ func unpackBaseMsg(buf []byte) (*paxospb.Header, int, int, error) {
 
 		bufChecksum := binary.LittleEndian.Uint32(buf[len(buf)-checksum_len:])
 
-		checksum := crc32.ChecksumIEEE(buf[:len(buf)-checksum_len])
+		checksum := crc(0, buf[:len(buf)-checksum_len])
 
 		if checksum != bufChecksum {
 			getBPInstance().UnPackChecksumNotSame()

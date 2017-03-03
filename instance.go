@@ -596,7 +596,7 @@ func (i *instance) onTimeout(timerID uint32, typ int) {
 		i.proposer.onPrepareTimeout()
 	case timer_Proposer_Accept_Timeout:
 		i.proposer.onAcceptTimeout()
-	case timer_Learner_Askforlearn_noop:
+	case timer_Learner_AskForLearn_Noop:
 		i.learner.askForLearnNoop()
 	case timer_Instance_Commit_Timeout:
 		i.onNewValueCommitTimeout()

@@ -3,7 +3,6 @@ package gopaxos
 import (
 	"encoding/binary"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"os"
 	"sync"
@@ -114,7 +113,7 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 	readLen, _ = l.metaFd.Read(checksumBuf)
 	metaChecksum := binary.LittleEndian.Uint32(checksumBuf)
 	if readLen == 4 {
-		checksum := crc32.ChecksumIEEE(fileIDBuf)
+		checksum := crc(0, fileIDBuf)
 		if checksum != metaChecksum {
 			lPLG1Err(l.groupIdx, "meta file checksum %d not same to cal checksum %d, fileid %d",
 				metaChecksum, checksum, l.fileID)
@@ -190,7 +189,7 @@ func (l *logStore) increaseFileID() error {
 	fileID := l.fileID + 1
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(fileID))
-	checkSum := crc32.ChecksumIEEE(buf)
+	checkSum := crc(0, buf)
 
 	_, err := l.metaFd.Seek(0, os.SEEK_SET)
 	if err != nil {
@@ -364,7 +363,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 
 	getBPInstance().AppendDataOK(writeLen, useTimeMs)
 
-	checksum := crc32.ChecksumIEEE(l.tmpAppendBuf[8:])
+	checksum := crc(0, l.tmpAppendBuf[8:])
 
 	sFileID := l.genFileID(fileID, offset, checksum)
 
@@ -433,7 +432,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 
 	fd.Close()
 
-	if fileChecksum := crc32.ChecksumIEEE(tmpBuf); fileChecksum != checksum {
+	if fileChecksum := crc(0, tmpBuf); fileChecksum != checksum {
 		getBPInstance().GetFileChecksumNotEqual()
 		lPLG1Err(l.groupIdx, "checksum not equal, filechecksum %u checksum %u", fileChecksum, checksum)
 		return 0, errChecksumNotMatch
@@ -600,7 +599,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 			break
 		}
 
-		fileChecksum := crc32.ChecksumIEEE(l.tmpBuf)
+		fileChecksum := crc(0, l.tmpBuf)
 
 		sFileID := l.genFileID(fileID, nowOffset, fileChecksum)
 

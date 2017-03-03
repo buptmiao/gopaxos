@@ -1,7 +1,6 @@
 package gopaxos
 
 import (
-	"hash/crc32"
 	"math/rand"
 	"os"
 	"strings"
@@ -240,7 +239,7 @@ func (c *checkpointSender) sendFile(sm StateMachine, dirPath, filePath string) e
 }
 
 func (c *checkpointSender) sendBuffer(smID int64, cpInstanceID uint64, filePath string, offset uint64, buffer []byte) error {
-	checksum := crc32.ChecksumIEEE(buffer)
+	checksum := crc(0, buffer)
 
 	for {
 		if c.isEnd {

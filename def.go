@@ -115,7 +115,7 @@ type timerType int32
 const (
 	timer_Proposer_Prepare_Timeout timerType = 1 + iota
 	timer_Proposer_Accept_Timeout
-	timer_Learner_Askforlearn_noop
+	timer_Learner_AskForLearn_Noop
 	timer_Instance_Commit_Timeout
 )
 
