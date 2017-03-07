@@ -104,7 +104,7 @@ func (l *learner) setSeenInstanceID(instanceID uint64, fromNodeID nodeId) {
 
 func (l *learner) resetAskForLearnNoop(timeout int) {
 	if l.askForLearnNoopTimerID > 0 {
-		l.loop.removeTimer(l.askForLearnNoopTimerID)
+		l.askForLearnNoopTimerID = l.loop.removeTimer(l.askForLearnNoopTimerID)
 	}
 
 	l.loop.addTimer(timeout, timer_Learner_AskForLearn_Noop, l.askForLearnNoopTimerID)

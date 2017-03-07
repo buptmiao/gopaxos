@@ -54,7 +54,7 @@ const (
 	checksum_len = 4
 
 	//max queue memsize
-	max_queue_mem_size = 209715200
+	max_Queue_Mem_Size = 209715200
 )
 
 type msgCmd int32
@@ -159,4 +159,5 @@ var (
 	errHeaderLenTooLong  = errors.New("headerlen too long")
 	errChecksumMiss      = errors.New("checksum size error")
 	errReceiverNotFinish = errors.New("cp receiver not finished")
+	errQueueMemExceed    = errors.New("msg queue mem size too large")
 )

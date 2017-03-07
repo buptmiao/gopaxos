@@ -7,7 +7,7 @@ const (
 )
 
 type SMCtx struct {
-	SMID int32
+	SMID int64
 	Ctx  interface{}
 }
 

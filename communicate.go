@@ -132,9 +132,7 @@ type transport struct {
 	network       *dfNetwork
 	isRecvEnd     bool
 	isRecvStarted bool
-
-	queue chan *queueData
-
+	queue         chan *queueData
 	sendConn      net.Conn
 	isSendEnd     bool
 	isSendStarted bool

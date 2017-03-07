@@ -263,7 +263,7 @@ func (i *instance) checkNewValue() {
 			return
 		}
 
-		i.smFac.packPaxosValue(value, i.conf.getSystemVSM().SMID())
+		value = i.smFac.packPaxosValue(value, i.conf.getSystemVSM().SMID())
 		i.proposer.newValue(value)
 	} else {
 		if i.opt.IsOpenChangeValueBeforePropose {
@@ -554,7 +554,7 @@ func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 		i.commitCtx.setResult(paxostrycommitret_ok, i.learner.getInstanceID(), i.learner.getLearnValue())
 
 		if i.commitTimerID > 0 {
-			i.loop.removeTimer(i.commitTimerID)
+			i.commitTimerID = i.loop.removeTimer(i.commitTimerID)
 		}
 
 		lPLGHead(i.conf.groupIdx, "[Learned] New paxos starting, Now.Proposer.InstanceID %d"+
@@ -590,7 +590,7 @@ func (i *instance) getNowInstanceID() uint64 {
 	return i.acceptor.getInstanceID()
 }
 
-func (i *instance) onTimeout(timerID uint32, typ int) {
+func (i *instance) onTimeout(timerID uint32, typ timerType) {
 	switch typ {
 	case timer_Proposer_Prepare_Timeout:
 		i.proposer.onPrepareTimeout()
