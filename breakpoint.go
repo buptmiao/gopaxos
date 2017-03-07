@@ -15,7 +15,7 @@ type Breakpoint interface {
 }
 
 type ProposerBP interface {
-	NewProposal(value string)
+	NewProposal(value []byte)
 	NewProposalSkipPrepare()
 	Prepare()
 	OnPrepareReply()
