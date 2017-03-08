@@ -2,9 +2,10 @@ package gopaxos
 
 import (
 	"container/list"
-	"github.com/buptmiao/gopaxos/paxospb"
 	"sync/atomic"
 	"time"
+
+	"github.com/buptmiao/gopaxos/paxospb"
 )
 
 const (
@@ -29,6 +30,7 @@ func newIOLoop(conf *config, i *instance) *ioLoop {
 		conf:         conf,
 		instance:     i,
 		messageQueue: make(chan []byte, getInsideOptionsInstance().getMaxIOLoopQueueLen()),
+		retryQueue:   list.New(),
 	}
 }
 

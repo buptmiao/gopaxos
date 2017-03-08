@@ -81,7 +81,7 @@ func (m *masterMgr) run() {
 			getBPInstance().DropMaster()
 			m.needDropMaster = false
 			continueLeaseTimeout = leaseTime * 2
-			lPLG1Imp(m.groupIdx, "Need drop master, this round wait time %dms", continueLeaseTimeout)
+			lPLGImp(m.groupIdx, "Need drop master, this round wait time %dms", continueLeaseTimeout)
 		}
 
 		endTime := getSteadyClockMS()
@@ -94,7 +94,7 @@ func (m *masterMgr) run() {
 			needSleepTime = continueLeaseTimeout - runTime
 		}
 
-		lPLG1Imp(m.groupIdx, "TryBeMaster, sleep time %dms", needSleepTime)
+		lPLGImp(m.groupIdx, "TryBeMaster, sleep time %dms", needSleepTime)
 		time.Sleep(needSleepTime * time.Millisecond)
 	}
 }
@@ -104,7 +104,7 @@ func (m *masterMgr) tryBeMaster(leaseTime int) {
 	masterNodeID, masterVersion := m.dfMasterSM.safeGetMaster()
 
 	if masterNodeID != nullNode && masterNodeID != m.paxosNode.GetMyNodeID() {
-		lPLG1Imp(m.groupIdx, "Ohter as master, can't try be master, masterid %d myid %d",
+		lPLGImp(m.groupIdx, "Ohter as master, can't try be master, masterid %d myid %d",
 			masterNodeID, m.paxosNode.GetMyNodeID())
 		return
 	}
@@ -114,7 +114,7 @@ func (m *masterMgr) tryBeMaster(leaseTime int) {
 	//step 2 try be master
 	paxosValue, err := makeOpValue(m.paxosNode.GetMyNodeID(), masterVersion, leaseTime, masterOperatorType_Complete)
 	if err != nil {
-		lPLG1Err(m.groupIdx, "Make paxos value fail")
+		lPLGErr(m.groupIdx, "Make paxos value fail")
 		return
 	}
 
@@ -123,7 +123,7 @@ func (m *masterMgr) tryBeMaster(leaseTime int) {
 	absMasterTimeout := getSteadyClockMS() + masterLeaseTimeout
 
 	ctx := &SMCtx{
-		SMID: master_v_smid,
+		SMID: master_V_SMID,
 		Ctx:  absMasterTimeout,
 	}
 

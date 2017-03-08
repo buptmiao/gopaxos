@@ -75,7 +75,7 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 	path := dbPath + "/" + "vfile"
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err = os.Mkdir(path, 0775); err != nil {
-			lPLG1Err(l.groupIdx, "Create dir fail, path %s", path)
+			lPLGErr(l.groupIdx, "Create dir fail, path %s", path)
 			return err
 		}
 	}
@@ -87,13 +87,13 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 	var err error
 	l.metaFd, err = os.OpenFile(metaPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "open meta file fail, filepath %s", metaPath)
+		lPLGErr(l.groupIdx, "open meta file fail, filepath %s", metaPath)
 		return err
 	}
 
 	_, err = l.metaFd.Seek(0, os.SEEK_SET)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "seek meta file fail, filepath %s", metaPath)
+		lPLGErr(l.groupIdx, "seek meta file fail, filepath %s", metaPath)
 		return err
 	}
 
@@ -104,7 +104,7 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 		if readLen == 0 {
 			l.fileID = 0
 		} else {
-			lPLG1Err(l.groupIdx, "read meta info fail, readlen %d", readLen)
+			lPLGErr(l.groupIdx, "read meta info fail, readlen %d", readLen)
 			return io.EOF
 		}
 	}
@@ -115,7 +115,7 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 	if readLen == 4 {
 		checksum := crc(0, fileIDBuf)
 		if checksum != metaChecksum {
-			lPLG1Err(l.groupIdx, "meta file checksum %d not same to cal checksum %d, fileid %d",
+			lPLGErr(l.groupIdx, "meta file checksum %d not same to cal checksum %d, fileid %d",
 				metaChecksum, checksum, l.fileID)
 			return errChecksumNotMatch
 		}
@@ -123,32 +123,32 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 
 	l.nowFileOffset, err = l.rebuildIndex(d)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "rebuild index fail, ret %v", err)
+		lPLGErr(l.groupIdx, "rebuild index fail, ret %v", err)
 		return err
 	}
 
 	l.fd, err = l.openFile(l.fileID)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "open file fail, ret %v", err)
+		lPLGErr(l.groupIdx, "open file fail, ret %v", err)
 		return err
 	}
 
 	l.nowFileSize, err = l.expandFile(l.fd)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "expand file fail, ret %v", err)
+		lPLGErr(l.groupIdx, "expand file fail, ret %v", err)
 		return err
 	}
 
 	l.nowFileOffset, err = l.fd.Seek(l.nowFileOffset, os.SEEK_SET)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "seek to now file offset %d fail", l.nowFileOffset)
+		lPLGErr(l.groupIdx, "seek to now file offset %d fail", l.nowFileOffset)
 		return err
 	}
 
 	l.fileLogger.log("init write fileid %d now_w_offset %d filesize %d",
 		l.fileID, l.nowFileOffset, l.nowFileSize)
 
-	lPLG1Head(l.groupIdx, "ok, path %s fileid %d meta checksum %u nowfilesize %d nowfilewriteoffset %d",
+	lPLGHead(l.groupIdx, "ok, path %s fileid %d meta checksum %u nowfilesize %d nowfilewriteoffset %d",
 		path, l.fileID, metaChecksum, l.nowFileSize, l.nowFileOffset)
 
 	return nil
@@ -157,7 +157,7 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 func (l *logStore) expandFile(fd *os.File) (int64, error) {
 	fileSize, err := fd.Seek(0, os.SEEK_END)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "lseek fail, ret %d", fileSize)
+		lPLGErr(l.groupIdx, "lseek fail, ret %d", fileSize)
 		return 0, err
 	}
 
@@ -170,7 +170,7 @@ func (l *logStore) expandFile(fd *os.File) (int64, error) {
 
 		_, err = fd.Write([1]byte{0})
 		if err != nil {
-			lPLG1Err(l.groupIdx, "write 1 bytes fail")
+			lPLGErr(l.groupIdx, "write 1 bytes fail")
 			return 0, err
 		}
 
@@ -198,7 +198,7 @@ func (l *logStore) increaseFileID() error {
 
 	_, err = l.metaFd.Write(buf)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "write meta fileid fail, %v", err)
+		lPLGErr(l.groupIdx, "write meta fileid fail, %v", err)
 		return err
 	}
 
@@ -206,7 +206,7 @@ func (l *logStore) increaseFileID() error {
 	binary.LittleEndian.PutUint32(checksumBuf, checkSum)
 	_, err = l.metaFd.Write(checksumBuf)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "write meta checksum fail, %v", err)
+		lPLGErr(l.groupIdx, "write meta checksum fail, %v", err)
 		return err
 	}
 
@@ -224,11 +224,11 @@ func (l *logStore) openFile(fileID int64) (*os.File, error) {
 	filepath := fmt.Sprintf("%s/%d.f", l.path, fileID)
 	fd, err := os.OpenFile(filepath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "open fail fail, filepath %s", filepath)
+		lPLGErr(l.groupIdx, "open fail fail, filepath %s", filepath)
 		return nil, err
 	}
 
-	lPLG1Imp(l.groupIdx, "ok, path %s", filepath)
+	lPLGImp(l.groupIdx, "ok, path %s", filepath)
 	return fd, nil
 }
 
@@ -240,7 +240,7 @@ func (l *logStore) deleteFile(fileID int64) error {
 	}
 
 	if fileID <= l.maxDeletedFileID {
-		lPLG1Debug(l.groupIdx, "file already deleted, fileid %d deletedmaxfileid %d",
+		lPLGDebug(l.groupIdx, "file already deleted, fileid %d deletedmaxfileid %d",
 			fileID, l.maxDeletedFileID)
 		return nil
 	}
@@ -248,13 +248,13 @@ func (l *logStore) deleteFile(fileID int64) error {
 	for deleteFileID := l.maxDeletedFileID; deleteFileID <= fileID; deleteFileID++ {
 		filepath := fmt.Sprintf("%s/%d.f", l.path, fileID)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			lPLG1Debug(l.groupIdx, "file already deleted, filepath %s", filepath)
+			lPLGDebug(l.groupIdx, "file already deleted, filepath %s", filepath)
 			l.maxDeletedFileID = deleteFileID
 			continue
 		}
 
 		if err := os.Remove(filepath); err != nil {
-			lPLG1Err(l.groupIdx, "remove fail, filepath %s ret %v", filepath, err)
+			lPLGErr(l.groupIdx, "remove fail, filepath %s ret %v", filepath, err)
 			return err
 		}
 
@@ -266,13 +266,13 @@ func (l *logStore) deleteFile(fileID int64) error {
 
 func (l *logStore) getFileID(size int) (*os.File, int64, int64, error) {
 	if l.fd == nil {
-		lPLG1Err(l.groupIdx, "File aready broken, fileid %d", l.fileID)
+		lPLGErr(l.groupIdx, "File aready broken, fileid %d", l.fileID)
 		return nil, 0, 0, errFileBroken
 	}
 
 	offset, err := l.fd.Seek(l.nowFileOffset, os.SEEK_SET)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "seek file failed: %v ", err)
+		lPLGErr(l.groupIdx, "seek file failed: %v ", err)
 		return err
 	}
 
@@ -294,19 +294,19 @@ func (l *logStore) getFileID(size int) (*os.File, int64, int64, error) {
 		offset, err = l.fd.Seek(0, os.SEEK_END)
 		if offset != 0 {
 			if err != nil {
-				lPLG1Err(l.groupIdx, "seek file failed: %v ", offset)
+				lPLGErr(l.groupIdx, "seek file failed: %v ", offset)
 				return err
 			}
 
 			l.fileLogger.log("new file but file aready exist, now fileid %d exist filesize %d", l.fileID, offset)
 
-			lPLG1Err(l.groupIdx, "IncreaseFileID success, but file exist, data wrong, file size %d", offset)
+			lPLGErr(l.groupIdx, "IncreaseFileID success, but file exist, data wrong, file size %d", offset)
 			return nil, 0, 0, errGetFileID
 		}
 
 		l.nowFileSize, err = l.expandFile(l.fd)
 		if err != nil {
-			lPLG1Err(l.groupIdx, "new file expand fail, fileid %d filename %s", l.fileID, l.fd.Name())
+			lPLGErr(l.groupIdx, "new file expand fail, fileid %d filename %s", l.fileID, l.fd.Name())
 
 			l.fileLogger.log("new file expand file fail, now fileid %d", l.fileID)
 
@@ -344,7 +344,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 	writeLen, err := fd.Write(l.tmpAppendBuf)
 	if err != nil {
 		getBPInstance().AppendDataFail()
-		lPLG1Err(l.groupIdx, "writelen %d not equal to %d, buffersize %u, err: %v",
+		lPLGErr(l.groupIdx, "writelen %d not equal to %d, buffersize %u, err: %v",
 			writeLen, tmpBufLen, len(buf), err)
 		return err
 	}
@@ -352,7 +352,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 	if wo {
 		err := fd.Sync()
 		if err != nil {
-			lPLG1Err(l.groupIdx, "fdatasync fail, writelen %d errno %v", writeLen, err)
+			lPLGErr(l.groupIdx, "fdatasync fail, writelen %d errno %v", writeLen, err)
 			return err
 		}
 	}
@@ -367,7 +367,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 
 	sFileID := l.genFileID(fileID, offset, checksum)
 
-	lPLG1Imp(l.groupIdx, "ok, offset %d fileid %d checksum %u instanceid %lu buffer size %d usetime %dms sync %v",
+	lPLGImp(l.groupIdx, "ok, offset %d fileid %d checksum %u instanceid %lu buffer size %d usetime %dms sync %v",
 		offset, fileID, checksum, instanceID, len(buf), useTimeMs, wo)
 
 	return sFileID, nil
@@ -400,13 +400,13 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	fileID, offset, checksum := l.parseFileID(sFileID)
 	fd, err := l.openFile(fileID)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "open file failed: %v ", err)
+		lPLGErr(l.groupIdx, "open file failed: %v ", err)
 		return 0, err
 	}
 
 	_, err = fd.Seek(offset, os.SEEK_SET)
 	if err != nil {
-		lPLG1Err(l.groupIdx, "seek file failed: %v ", err)
+		lPLGErr(l.groupIdx, "seek file failed: %v ", err)
 		return 0, err
 	}
 
@@ -414,7 +414,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	n, err := fd.Read(tmpBuf)
 	if err != nil {
 		fd.Close()
-		lPLG1Err(l.groupIdx, "readlen %d not qual to 8, err: %v", n, err)
+		lPLGErr(l.groupIdx, "readlen %d not qual to 8, err: %v", n, err)
 		return 0, err
 	}
 	bufLen := binary.LittleEndian.Uint64(tmpBuf)
@@ -426,7 +426,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	readLen, err := fd.Read(tmpBuf)
 	if err != nil {
 		fd.Close()
-		lPLG1Err(l.groupIdx, "readlen %d not qual to %u", readLen, bufLen)
+		lPLGErr(l.groupIdx, "readlen %d not qual to %u", readLen, bufLen)
 		return 0, err
 	}
 
@@ -434,7 +434,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 
 	if fileChecksum := crc(0, tmpBuf); fileChecksum != checksum {
 		getBPInstance().GetFileChecksumNotEqual()
-		lPLG1Err(l.groupIdx, "checksum not equal, filechecksum %u checksum %u", fileChecksum, checksum)
+		lPLGErr(l.groupIdx, "checksum not equal, filechecksum %u checksum %u", fileChecksum, checksum)
 		return 0, errChecksumNotMatch
 	}
 
@@ -450,7 +450,7 @@ func (l *logStore) del(sFileID string, instanceID uint64) error {
 	fileID, _, _ := l.parseFileID(sFileID)
 
 	if fileID > l.fileID {
-		lPLG1Err(l.groupIdx, "del fileid %d large than useing fileid %d", fileID, l.fileID)
+		lPLGErr(l.groupIdx, "del fileid %d large than useing fileid %d", fileID, l.fileID)
 		return errFileIDTooLarge
 	}
 
@@ -465,7 +465,7 @@ func (l *logStore) forceDel(sFileID string, instanceID uint64) error {
 	fileID, offset, _ := l.parseFileID(sFileID)
 
 	if fileID != l.fileID {
-		lPLG1Err(l.groupIdx, "del fileid %d not equal to fileid %d", fileID, l.fileID)
+		lPLGErr(l.groupIdx, "del fileid %d not equal to fileid %d", fileID, l.fileID)
 		return errFileIDMismatch
 	}
 
@@ -489,12 +489,12 @@ func (l *logStore) rebuildIndex(d *db) (int64, error) {
 	}
 
 	if fileID > l.fileID {
-		lPLG1Err(l.groupIdx, "LevelDB last fileid %d larger than meta now fileid %d, file error",
+		lPLGErr(l.groupIdx, "LevelDB last fileid %d larger than meta now fileid %d, file error",
 			fileID, l.fileID)
 		return nowFileWriteOffset, errFileIDTooLarge
 	}
 
-	lPLG1Head(l.groupIdx, "START fileid %d offset %d checksum %u", fileID, offset, checksum)
+	lPLGHead(l.groupIdx, "START fileid %d offset %d checksum %u", fileID, offset, checksum)
 
 	for nowFileID := fileID; ; nowFileID++ {
 		nowFileWriteOffset, err = l.rebuildIndexForOneFile(nowFileID, offset, d, &nowInstanceID)
@@ -503,10 +503,10 @@ func (l *logStore) rebuildIndex(d *db) (int64, error) {
 		}
 		if err == errFileNotExist {
 			if nowFileID != 0 && nowFileID != l.fileID+1 {
-				lPLG1Err(l.groupIdx, "meta file wrong, nowfileid %d meta.nowfileid %d", nowFileID, l.fileID)
+				lPLGErr(l.groupIdx, "meta file wrong, nowfileid %d meta.nowfileid %d", nowFileID, l.fileID)
 				return nowFileWriteOffset, errMetaFileBroken
 			}
-			lPLG1Imp(l.groupIdx, "END rebuild ok, nowfileid %d", nowFileID)
+			lPLGImp(l.groupIdx, "END rebuild ok, nowfileid %d", nowFileID)
 			return nowFileWriteOffset, nil
 		}
 		offset = 0
@@ -520,7 +520,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 	filepath := fmt.Sprintf("%s/%d.f", l.path, fileID)
 
 	if _, e := os.Stat(filepath); os.IsNotExist(e) {
-		lPLG1Debug(l.groupIdx, "file not exist, filepath %s", filepath)
+		lPLGDebug(l.groupIdx, "file not exist, filepath %s", filepath)
 		return 0, errFileNotExist
 	}
 
@@ -547,25 +547,25 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 	for {
 		readLen, _ := fd.Read(tmpBuf)
 		if readLen == 0 {
-			lPLG1Head(l.groupIdx, "File End, fileid %d offset %d", fileID, nowOffset)
+			lPLGHead(l.groupIdx, "File End, fileid %d offset %d", fileID, nowOffset)
 			nowFileWriteOffset = nowOffset
 			break
 		}
 		if readLen != 8 {
 			needTruncate = true
-			lPLG1Err(l.groupIdx, "readlen %d not qual to 8, need truncate", readLen)
+			lPLGErr(l.groupIdx, "readlen %d not qual to 8, need truncate", readLen)
 			break
 		}
 
 		bufLen := binary.LittleEndian.Uint64(tmpBuf)
 		if bufLen == 0 {
-			lPLG1Head(l.groupIdx, "File Data End, fileid %d offset %d", fileID, nowOffset)
+			lPLGHead(l.groupIdx, "File Data End, fileid %d offset %d", fileID, nowOffset)
 			nowFileWriteOffset = nowOffset
 			break
 		}
 
 		if bufLen > fileLen || bufLen < 8 {
-			lPLG1Err(l.groupIdx, "File data len wrong, data len %d filelen %d", bufLen, fileLen)
+			lPLGErr(l.groupIdx, "File data len wrong, data len %d filelen %d", bufLen, fileLen)
 			err = errFileSizeWrong
 			break
 		}
@@ -574,14 +574,14 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 		readLen, _ = fd.Read(l.tmpBuf)
 		if readLen != bufLen {
 			needTruncate = true
-			lPLG1Err(l.groupIdx, "readlen %d not qual to %d, need truncate", readLen, bufLen)
+			lPLGErr(l.groupIdx, "readlen %d not qual to %d, need truncate", readLen, bufLen)
 			break
 		}
 
 		instanceID := int64(binary.LittleEndian.Uint64(l.tmpBuf[:8]))
 
 		if instanceID < *nowInstanceID {
-			lPLG1Err("File data wrong, read instanceid %d smaller than now instanceid %d",
+			lPLGErr("File data wrong, read instanceid %d smaller than now instanceid %d",
 				instanceID, nowInstanceID)
 			err = errFileBroken
 			break
@@ -593,7 +593,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 		e := state.Unmarshal(l.tmpBuf[8:])
 		if e != nil {
 			l.nowFileOffset = nowOffset
-			lPLG1Err(l.groupIdx, "This instance's buffer wrong, can't parse to acceptState, instanceid %d bufferlen %d nowoffset %d",
+			lPLGErr(l.groupIdx, "This instance's buffer wrong, can't parse to acceptState, instanceid %d bufferlen %d nowoffset %d",
 				instanceID, bufLen-8, nowOffset)
 			needTruncate = true
 			break
@@ -607,7 +607,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 		if err != nil {
 			break
 		}
-		lPLG1Imp(l.groupIdx, "rebuild one index ok, fileid %d offset %d instanceid %d checksum %d buffer size %d",
+		lPLGImp(l.groupIdx, "rebuild one index ok, fileid %d offset %d instanceid %d checksum %d buffer size %d",
 			fileID, nowOffset, instanceID, fileChecksum, bufLen-8)
 
 		nowOffset += bufLen + 8
@@ -619,7 +619,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 		l.fileLogger.log("truncate fileid %d offset %d filesize %d",
 			fileID, nowOffset, fileLen)
 		if e := os.Truncate(filepath, nowOffset); e != nil {
-			lPLG1Err(l.groupIdx, "truncate fail, file path %s truncate to length %d err: %v",
+			lPLGErr(l.groupIdx, "truncate fail, file path %s truncate to length %d err: %v",
 				filepath, nowOffset, e)
 			return nowFileWriteOffset, e
 		}

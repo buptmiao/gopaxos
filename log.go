@@ -160,19 +160,3 @@ func lPLGHead(groupIdx int, format string, args ...interface{}) {
 func lPLGDebug(groupIdx int, format string, args ...interface{}) {
 	getLoggerInstance().LogVerbose("DEBUG(%d): %s "+format, groupIdx, formatHeader(), args...)
 }
-
-func lPLG1Err(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogError("ERR(%d): %s "+format, groupIdx, formatHeader(), args...)
-}
-
-func lPLG1Imp(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogInfo("Showy(%d): %s "+format, groupIdx, formatHeader(), args...)
-}
-
-func lPLG1Head(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogWarning("Imp(%d): %s "+format, groupIdx, formatHeader(), args...)
-}
-
-func lPLG1Debug(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogVerbose("DEBUG(%d): %s "+format, groupIdx, formatHeader(), args...)
-}

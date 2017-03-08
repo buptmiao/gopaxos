@@ -44,14 +44,18 @@ func newNotifierPool() *notifierPool {
 
 func (n *notifierPool) getNotifier(id uint64) *notifier {
 	n.RLock()
-	defer n.RUnlock()
-	return n.pool[id]
-}
+	ret := n.pool[id]
+	n.RUnlock()
+	if ret != nil {
+		return ret
+	}
 
-func (n *notifierPool) addNotifier(id uint64, v *notifier) {
+	ret = newNotifier()
 	n.Lock()
-	defer n.Unlock()
-	n.pool[id] = v
+	n.pool[id] = ret
+	n.Unlock()
+
+	return ret
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,6 +140,10 @@ func (s *serialLock) wait() {
 
 func (s *serialLock) interrupt() {
 	s.cond.Signal()
+}
+
+func (s *serialLock) broadcast() {
+	s.cond.Broadcast()
 }
 
 // timeout return false.
@@ -409,4 +417,18 @@ func getGid(id uint64) uint64 {
 
 func crc(crc uint32, data []byte) uint32 {
 	return crc32.Update(crc, crc32.IEEETable, data)
+}
+
+var count uint64
+
+func getUniqueID() uint64 {
+	high := getSteadyClockMS() << 23
+	low := count
+
+	count++
+	if count == 1<<23 {
+		count = 0
+	}
+
+	return high + low
 }

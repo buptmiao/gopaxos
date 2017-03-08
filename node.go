@@ -2,7 +2,7 @@ package gopaxos
 
 //All the function in class Node is thread safe!
 type Node interface {
-	Propose(groupIdx int, value []byte, smCtx *SMCtx) (uint64, error)
+	Propose(groupIdx int, value []byte, smCtx *SMCtx) (uint64, int32)
 	GetNowInstanceID(groupIdx int) uint64
 	GetMyNodeID() nodeId
 	//Batch propose.
@@ -11,7 +11,7 @@ type Node interface {
 	//Warning: BatchProposal will have same llInstanceID returned but different iBatchIndex.
 	//Batch values's execute order in StateMachine is certain, the return value iBatchIndex
 	//means the execute order index, start from 0.
-	BatchPropose(groupIdx int, value []byte, smCtx *SMCtx) (uint64, int, error)
+	BatchPropose(groupIdx int, value []byte, smCtx *SMCtx) (uint64, int, int32)
 	//PhxPaxos will batch proposal while waiting proposals count reach to BatchCount,
 	//or wait time reach to BatchDelayTimeMs.
 	SetBatchCount(groupIdx int, batchCount int)
@@ -114,14 +114,13 @@ func RunNode(opt *Options) (Node, error) {
 
 // node implements the interface Node
 type node struct {
-	Id         nodeId
-	logStorage *multiDatabase
-	network    *dfNetwork
-	notifyPool *notifierPool
-
-	groupList    []*group
-	masterList   []*masterMgr
-	proposeBatch []*proposeBatch
+	Id               nodeId
+	logStorage       *multiDatabase
+	network          *dfNetwork
+	notifyPool       *notifierPool
+	groupList        []*group
+	masterList       []*masterMgr
+	proposeBatchList []*proposeBatch
 }
 
 func newNode() *node {
@@ -243,6 +242,12 @@ func (n *node) runMaster(opt *Options) {
 	}
 }
 
+func (n *node) runProposeBatch() {
+	for _, p := range n.proposeBatchList {
+		p.start()
+	}
+}
+
 func (n *node) AddStateMachineToGroup(groupIdx int, sm StateMachine) {
 
 }
@@ -254,7 +259,7 @@ func (n *node) stop() {
 	}
 
 	//2.step: stop propose batch
-	for _, p := range n.proposeBatch {
+	for _, p := range n.proposeBatchList {
 		p.stop()
 	}
 	//3.step: stop network.

@@ -39,10 +39,10 @@ func (s *systemVSM) init() error {
 	if err == ErrNotFoundFromStorage {
 		s.sysVar.Gid = 0
 		s.sysVar.Version = -1
-		lPLG1Imp(s.groupIdx, "variables not exist")
+		lPLGImp(s.groupIdx, "variables not exist")
 	} else {
 		s.refreshNodeID()
-		lPLG1Imp(s.groupIdx, "OK, gourpidx %d gid %d version %d",
+		lPLGImp(s.groupIdx, "OK, gourpidx %d gid %d version %d",
 			s.sysVar.GetGid(), s.sysVar.GetVersion())
 	}
 
@@ -53,7 +53,7 @@ func (s *systemVSM) updateSystemVariables(sysVar *paxospb.SystemVariables) error
 	wo := writeOptions(true)
 
 	if err := s.sysVStore.write(wo, s.groupIdx, sysVar); err != nil {
-		lPLG1Err(s.groupIdx, "SystemVStore::Write fail, ret %v", err)
+		lPLGErr(s.groupIdx, "SystemVStore::Write fail, ret %v", err)
 		return err
 	}
 
@@ -68,22 +68,22 @@ func (s *systemVSM) Execute(groupIdx int, instanceID uint64, value []byte, ctx *
 	sysVar := &paxospb.SystemVariables{}
 	err := sysVar.Unmarshal(value)
 	if err != nil {
-		lPLG1Err(s.groupIdx, "Variables.ParseFromArray fail, bufferlen %d", len(value))
+		lPLGErr(s.groupIdx, "Variables.ParseFromArray fail, bufferlen %d", len(value))
 		return false
 	}
 
 	if s.sysVar.GetGid() != 0 && sysVar.GetGid() != s.sysVar.GetGid() {
-		lPLG1Err(s.groupIdx, "modify.gid %d not equal to now.gid %d", sysVar.GetGid(), s.sysVar.GetGid())
+		lPLGErr(s.groupIdx, "modify.gid %d not equal to now.gid %d", sysVar.GetGid(), s.sysVar.GetGid())
 		if ctx != nil {
-			ctx.Ctx = paxos_membershipop_gidnotsame
+			ctx.Ctx = paxos_MembershipOp_GidNotSame
 		}
 		return true
 	}
 
 	if sysVar.GetVersion() != s.sysVar.GetVersion() {
-		lPLG1Err("modify.version %d not equal to now.version %d", sysVar.GetVersion(), s.sysVar.GetVersion())
+		lPLGErr("modify.version %d not equal to now.version %d", sysVar.GetVersion(), s.sysVar.GetVersion())
 		if ctx != nil {
-			ctx.Ctx = paxos_membershipop_versionconflit
+			ctx.Ctx = paxos_MembershipOp_VersionConflit
 		}
 		return true
 	}
@@ -94,7 +94,7 @@ func (s *systemVSM) Execute(groupIdx int, instanceID uint64, value []byte, ctx *
 		return false
 	}
 
-	lPLG1Head(groupIdx, "OK, new version %d gid %d", s.sysVar.GetVersion(), s.sysVar.GetGid())
+	lPLGHead(groupIdx, "OK, new version %d gid %d", s.sysVar.GetVersion(), s.sysVar.GetGid())
 	if ctx != nil {
 		ctx.Ctx = 0
 	}
@@ -132,7 +132,7 @@ func (s *systemVSM) membershipOPValue(nodeList NodeInfoList, version uint64) ([]
 
 	bytes, err := sysVar.Marshal()
 	if err != nil {
-		lPLG1Err(s.groupIdx, "Variables.Marshal fail")
+		lPLGErr(s.groupIdx, "Variables.Marshal fail")
 		return nil, err
 	}
 
@@ -145,7 +145,7 @@ func (s *systemVSM) createGidOPValue(gid uint64) ([]byte, error) {
 
 	bytes, err := sysVar.Marshal()
 	if err != nil {
-		lPLG1Err(s.groupIdx, "Variables.Marshal fail")
+		lPLGErr(s.groupIdx, "Variables.Marshal fail")
 		return nil, err
 	}
 
@@ -154,7 +154,7 @@ func (s *systemVSM) createGidOPValue(gid uint64) ([]byte, error) {
 
 func (s *systemVSM) addNodeIDList(nodeList NodeInfoList) {
 	if s.sysVar.GetGid() != 0 {
-		lPLG1Err(s.groupIdx, "No need to add, i already have membership info.")
+		lPLGErr(s.groupIdx, "No need to add, i already have membership info.")
 		return
 	}
 
@@ -179,7 +179,7 @@ func (s *systemVSM) refreshNodeID() {
 		nodeInfo := NewNodeInfo(n.GetNodeid(), "", 0)
 		nodeInfo.parseNodeID()
 
-		lPLG1Head("ip %s port %d nodeid %d",
+		lPLGHead("ip %s port %d nodeid %d",
 			nodeInfo.GetIP(), nodeInfo.GetPort(), nodeInfo.GetNodeID())
 		s.nodeIDSet[nodeInfo.GetNodeID()]
 
@@ -222,7 +222,7 @@ func (s *systemVSM) GetCheckpointBuffer() ([]byte, error) {
 	}
 	bytes, err := s.sysVar.Marshal()
 	if err != nil {
-		lPLG1Err(s.groupIdx, "Variables.Marshal fail")
+		lPLGErr(s.groupIdx, "Variables.Marshal fail")
 		return nil, err
 	}
 	return bytes, nil
@@ -235,22 +235,22 @@ func (s *systemVSM) UpdateByCheckpoint(buf []byte) (bool, error) {
 
 	sysVar := &paxospb.SystemVariables{}
 	if err := sysVar.Unmarshal(buf); err != nil {
-		lPLG1Err("Variables.Unmarshal fail, bufferlen %d", len(buf))
+		lPLGErr("Variables.Unmarshal fail, bufferlen %d", len(buf))
 		return false, err
 	}
 
 	if sysVar.GetVersion() == uint64(-1) {
-		lPLG1Err(s.groupIdx, "variables.version not init, this is not checkpoint")
+		lPLGErr(s.groupIdx, "variables.version not init, this is not checkpoint")
 		return false, errVersionNotInit
 	}
 
 	if s.sysVar.GetGid() != 0 && sysVar.GetGid() != s.sysVar.GetGid() {
-		lPLG1Err("gid not same, cp.gid %d now.gid %d", sysVar.GetGid(), s.sysVar.GetGid())
+		lPLGErr("gid not same, cp.gid %d now.gid %d", sysVar.GetGid(), s.sysVar.GetGid())
 		return false, errGidNotSame
 	}
 
 	if s.sysVar.GetVersion() != uint64(-1) && sysVar.GetVersion() <= s.sysVar.GetVersion() {
-		lPLG1Imp("lag checkpoint, no need update, cp.version %d now.version %d",
+		lPLGImp("lag checkpoint, no need update, cp.version %d now.version %d",
 			sysVar.GetVersion(), s.sysVar.GetVersion())
 		return false, nil
 	}
@@ -260,7 +260,7 @@ func (s *systemVSM) UpdateByCheckpoint(buf []byte) (bool, error) {
 		return true, err
 	}
 
-	lPLG1Head("ok, cp.version %d cp.membercount %d old.version %d old.membercount %d",
+	lPLGHead("ok, cp.version %d cp.membercount %d old.version %d old.membercount %d",
 		sysVar.GetVersion(), len(sysVar.GetMemberShip()), oldVar.GetVersion(), len(oldVar.GetMemberShip()))
 
 	return true, nil
@@ -275,7 +275,7 @@ func (s *systemVSM) getMembershipMap() map[nodeId]struct{} {
 }
 
 func (s *systemVSM) SMID() int {
-	return system_v_smid
+	return system_V_SMID
 }
 
 func (s *systemVSM) GetCheckpointInstanceID(groupIdx int) uint64 {

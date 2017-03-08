@@ -41,7 +41,7 @@ func (m *masterStateMachine) Execute(groupIdx int, instanceID uint64, paxosValue
 	masterOper := &paxospb.MasterOperator{}
 	err := masterOper.Unmarshal(paxosValue)
 	if err != nil {
-		lPLG1Err(m.groupIdx, "MasterOper data wrong")
+		lPLGErr(m.groupIdx, "MasterOper data wrong")
 		return false
 	}
 
@@ -51,13 +51,13 @@ func (m *masterStateMachine) Execute(groupIdx int, instanceID uint64, paxosValue
 			absMasterTimeout = smCtx.Ctx.(uint64)
 		}
 
-		lPLG1Imp(m.groupIdx, "absmaster timeout %d", absMasterTimeout)
+		lPLGImp(m.groupIdx, "absmaster timeout %d", absMasterTimeout)
 
 		if err := m.learnMaster(instanceID, masterOper, absMasterTimeout); err != nil {
 			return false
 		}
 	} else {
-		lPLG1Err(m.groupIdx, "unknown op %d", masterOper.GetOperator())
+		lPLGErr(m.groupIdx, "unknown op %d", masterOper.GetOperator())
 		//wrong op, just skip, so return true;
 		return true
 	}
@@ -66,7 +66,7 @@ func (m *masterStateMachine) Execute(groupIdx int, instanceID uint64, paxosValue
 }
 
 func (m *masterStateMachine) SMID() int64 {
-	return master_v_smid
+	return master_V_SMID
 }
 
 func (m *masterStateMachine) ExecuteForCheckpoint(groupIdx int, instanceID uint64, paxosValue []byte) bool {
@@ -89,7 +89,7 @@ func (m *masterStateMachine) BeforePropose(groupIdx, value []byte) []byte {
 	masterOper.Lastversion = m.masterVersion
 	bytes, err := masterOper.Marshal()
 	if err != nil {
-		lPLG1Err(m.groupIdx, "MasterOper data wrong")
+		lPLGErr(m.groupIdx, "MasterOper data wrong")
 		return value
 	}
 	return bytes
@@ -118,12 +118,12 @@ func (m *masterStateMachine) UnLockCheckpointState() {
 func (m *masterStateMachine) init() error {
 	value, err := m.mvStore.read(m.groupIdx)
 	if err != nil && err != ErrNotFoundFromStorage {
-		lPLG1Err(m.groupIdx, "Master variables read from store fail, ret %d", err)
+		lPLGErr(m.groupIdx, "Master variables read from store fail, ret %d", err)
 		return err
 	}
 
 	if err == ErrNotFoundFromStorage {
-		lPLG1Imp(m.groupIdx, "no master variables exist")
+		lPLGImp(m.groupIdx, "no master variables exist")
 	} else {
 		m.masterVersion = value.GetVersion()
 
@@ -136,7 +136,7 @@ func (m *masterStateMachine) init() error {
 		}
 	}
 
-	lPLG1Head(m.groupIdx, "OK, master nodeid %d version %d expiretime %d",
+	lPLGHead(m.groupIdx, "OK, master nodeid %d version %d expiretime %d",
 		m.masterNodeID, m.masterVersion, m.absExpireTime)
 
 	return nil
@@ -145,18 +145,18 @@ func (m *masterStateMachine) init() error {
 func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.MasterOperator, absMasterTimeout uint64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	lPLG1Debug(m.groupIdx, "my last version %d other last version %d this version %d instanceid %d",
+	lPLGDebug(m.groupIdx, "my last version %d other last version %d this version %d instanceid %d",
 		m.masterVersion, masterOper.GetLastversion(), masterOper.GetVersion(), instanceID)
 
 	if masterOper.GetLastversion() != 0 && instanceID > m.masterVersion && masterOper.GetLastversion() != m.masterVersion {
 		getBPInstance().MasterSMInconsistent()
 
-		lPLG1Err(m.groupIdx, "other last version %d not same to my last version %d, instanceid %d",
+		lPLGErr(m.groupIdx, "other last version %d not same to my last version %d, instanceid %d",
 			masterOper.GetLastversion(), m.masterVersion, instanceID)
 
 		if rand.Uint32()%100 < 50 {
 			//try to fix online
-			lPLG1Err(m.groupIdx, "try to fix, set my master version %d as other last version %d, instanceid %d",
+			lPLGErr(m.groupIdx, "try to fix, set my master version %d as other last version %d, instanceid %d",
 				m.masterVersion, masterOper.GetLastversion(), instanceID)
 
 			m.masterVersion = masterOper.GetLastversion()
@@ -164,13 +164,13 @@ func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.
 	}
 
 	if masterOper.GetVersion() != m.masterVersion {
-		lPLG1Debug(m.groupIdx, "version conflit, op version %d now master version %d",
+		lPLGDebug(m.groupIdx, "version conflit, op version %d now master version %d",
 			masterOper.GetVersion(), m.masterVersion)
 		return nil
 	}
 
 	if err := m.updateMasterToStore(masterOper.GetNodeid(), instanceID, masterOper.GetTimeout()); err != nil {
-		lPLG1Err(m.groupIdx, "UpdateMasterToStore fail, err %v", err)
+		lPLGErr(m.groupIdx, "UpdateMasterToStore fail, err %v", err)
 		return err
 	}
 
@@ -180,20 +180,20 @@ func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.
 		//use local abstimeout
 		m.absExpireTime = absMasterTimeout
 		getBPInstance().SuccessBeMaster()
-		lPLG1Head(m.groupIdx, "Be master success, absexpiretime %d", m.absExpireTime)
+		lPLGHead(m.groupIdx, "Be master success, absexpiretime %d", m.absExpireTime)
 	} else {
 		//other be master
 		//use new start timeout
 		m.absExpireTime = getSteadyClockMS() + masterOper.GetTimeout()
 
 		getBPInstance().OtherBeMaster()
-		lPLG1Head(m.groupIdx, "Ohter be master, absexpiretime %d", m.absExpireTime)
+		lPLGHead(m.groupIdx, "Ohter be master, absexpiretime %d", m.absExpireTime)
 	}
 
 	m.leaseTime = masterOper.GetTimeout()
 	m.masterVersion = instanceID
 
-	lPLG1Imp(m.groupIdx, "OK, masternodeid %d version %d abstimeout %d",
+	lPLGImp(m.groupIdx, "OK, masternodeid %d version %d abstimeout %d",
 		m.masterNodeID, m.masterVersion, m.absExpireTime)
 
 	return nil
@@ -252,7 +252,7 @@ func (m *masterStateMachine) GetCheckpointBuffer() ([]byte, error) {
 
 	bytes, err := mVar.Marshal()
 	if err != nil {
-		lPLG1Err(m.groupIdx, "Variables.Marshal fail")
+		lPLGErr(m.groupIdx, "Variables.Marshal fail")
 		return nil, err
 	}
 
@@ -268,7 +268,7 @@ func (m *masterStateMachine) UpdateByCheckpoint(buf []byte) (bool, error) {
 	mVar := &paxospb.MasterVariables{}
 	err := mVar.Unmarshal(buf)
 	if err != nil {
-		lPLG1Err(m.groupIdx, "Variables.Unmarshal fail, bufferlen %d", len(buf))
+		lPLGErr(m.groupIdx, "Variables.Unmarshal fail, bufferlen %d", len(buf))
 		return false, err
 	}
 
@@ -276,7 +276,7 @@ func (m *masterStateMachine) UpdateByCheckpoint(buf []byte) (bool, error) {
 	defer m.mu.Unlock()
 
 	if mVar.GetVersion() <= m.masterVersion && m.masterVersion != uint64(-1) {
-		lPLG1Imp(m.groupIdx, "lag checkpoint, no need update, cp.version %d now.version %d",
+		lPLGImp(m.groupIdx, "lag checkpoint, no need update, cp.version %d now.version %d",
 			mVar.GetVersion(), m.masterVersion)
 		return false, nil
 	}
@@ -286,7 +286,7 @@ func (m *masterStateMachine) UpdateByCheckpoint(buf []byte) (bool, error) {
 		return false, err
 	}
 
-	lPLG1Head(m.groupIdx, "ok, cp.version %d cp.masternodeid %d old.version %d old.masternodeid %d",
+	lPLGHead(m.groupIdx, "ok, cp.version %d cp.masternodeid %d old.version %d old.masternodeid %d",
 		mVar.GetVersion(), mVar.GetMasterNodeid(), m.masterVersion, m.masterNodeID)
 
 	m.masterVersion = mVar.GetVersion()

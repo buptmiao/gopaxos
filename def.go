@@ -6,40 +6,38 @@ import (
 )
 
 const (
-	system_v_smid int = 100000000 + iota
-	master_v_smid
-	batch_propose_smid
+	system_V_SMID int = 100000000 + iota
+	master_V_SMID
+	batch_Propose_SMID
 )
 
-var ()
-
-type paxostrycommitret int32
+type paxosTryCommitRet int32
 
 const (
-	paxostrycommitret_ok                          paxostrycommitret = 0
-	paxostrycommitret_reject                      paxostrycommitret = -2
-	paxostrycommitret_conflict                    paxostrycommitret = 14
-	paxostrycommitret_executefail                 paxostrycommitret = 15
-	paxostrycommitret_follower_cannot_commit      paxostrycommitret = 16
-	paxostrycommitret_im_not_in_membership        paxostrycommitret = 17
-	paxostrycommitret_value_size_toolarge         paxostrycommitret = 18
-	paxostrycommitret_timeout                     paxostrycommitret = 404
-	paxostrycommitret_toomanythreadwaiting_reject paxostrycommitret = 405
+	paxosTryCommitRet_Ok                          paxosTryCommitRet = 0
+	paxosTryCommitRet_Reject                      paxosTryCommitRet = -2
+	paxosTryCommitRet_Conflict                    paxosTryCommitRet = 14
+	paxosTryCommitRet_ExecuteFail                 paxosTryCommitRet = 15
+	paxosTryCommitRet_Follower_Cannot_Commit      paxosTryCommitRet = 16
+	paxosTryCommitRet_IM_Not_In_Membership        paxosTryCommitRet = 17
+	paxosTryCommitRet_Value_Size_TooLarge         paxosTryCommitRet = 18
+	paxosTryCommitRet_Timeout                     paxosTryCommitRet = 404
+	paxosTryCommitRet_TooManyThreadWaiting_Reject paxosTryCommitRet = 405
 )
 
-type paxosnodefunctionret int32
+type paxosNodeFunctionRet int32
 
 const (
-	paxos_systemerror                           paxosnodefunctionret = -1
-	paxos_groupidxwrong                         paxosnodefunctionret = -5
-	paxos_membershipop_gidnotsame               paxosnodefunctionret = -501
-	paxos_membershipop_versionconflit           paxosnodefunctionret = -502
-	paxos_membershipop_nogid                    paxosnodefunctionret = 1001
-	paxos_membershipop_add_nodeexist            paxosnodefunctionret = 1002
-	paxos_membershipop_remove_nodenotexist      paxosnodefunctionret = 1003
-	paxos_membershipop_change_nochange          paxosnodefunctionret = 1004
-	paxos_getinstancevalue_value_notexist       paxosnodefunctionret = 1005
-	paxos_getinstancevalue_value_not_chosen_yet paxosnodefunctionret = 1006
+	paxos_SystemError                           paxosNodeFunctionRet = -1
+	paxos_GroupIdxWrong                         paxosNodeFunctionRet = -5
+	paxos_MembershipOp_GidNotSame               paxosNodeFunctionRet = -501
+	paxos_MembershipOp_VersionConflit           paxosNodeFunctionRet = -502
+	paxos_MembershipOp_NoGid                    paxosNodeFunctionRet = 1001
+	paxos_MembershipOp_Add_NodeExist            paxosNodeFunctionRet = 1002
+	paxos_MembershipOp_Remove_NodeNotExist      paxosNodeFunctionRet = 1003
+	paxos_MembershipOp_Change_NoChange          paxosNodeFunctionRet = 1004
+	paxos_GetInstanceValue_Value_NotExist       paxosNodeFunctionRet = 1005
+	paxos_GetInstanceValue_Value_Not_Chosen_Yet paxosNodeFunctionRet = 1006
 )
 
 const (
@@ -117,47 +115,4 @@ const (
 	timer_Proposer_Accept_Timeout
 	timer_Learner_AskForLearn_Noop
 	timer_Instance_Commit_Timeout
-)
-
-var (
-	ErrLogStoragePathEmpty = errors.New("empty path of log storage")
-	ErrNotFoundFromStorage = errors.New("Not found from storage")
-	ErrUDPMaxSizeTooLarge  = errors.New("udp max size too large")
-	ErrGroupCount          = errors.New("group count too proper")
-	ErrSelfNodeFollowed    = errors.New("self node follow itself")
-	ErrGroupIdxOutOfRange  = errors.New("group index out of range")
-
-	errChecksumNotMatch             = errors.New("checksum error")
-	errFileBroken                   = errors.New("file is broken")
-	errMetaFileBroken               = errors.New("meta file broken")
-	errGetFileID                    = errors.New("get file id failed")
-	errFileIDTooLarge               = errors.New("del fileid too large")
-	errFileIDMismatch               = errors.New("fileid mismatch")
-	errFileNotExist                 = errors.New("file not exists")
-	errFileSizeWrong                = errors.New("file size is wrong")
-	errDBNotInit                    = errors.New("db not init yet")
-	errFileInstanceIDMismatch       = errors.New("file instanceid not match")
-	errInstanceIDSizeWrong          = errors.New("instance id size wrong")
-	errGroupCountNotProper          = errors.New("group count wrong")
-	errMaxInstanceIDNotExist        = errors.New("max instance id not exists")
-	errMsgQueueFull                 = errors.New("msg queue is full")
-	errVersionNotInit               = errors.New("version not init")
-	errGidNotSame                   = errors.New("gid not same")
-	errCheckpointInstanceID         = errors.New("checkpoint instanceID is not correct")
-	errSmallThanMinChosenInstanceID = errors.New("small than min chosen instanceid")
-	errInstanceExecuteFailed        = errors.New("failure in instance execution")
-	errGetInstanceValueNotExist     = errors.New("paxos getinstancevalue value not exist")
-	errGetInstanceValueNotChosen    = errors.New("paxos getinstancevalue value not chosen yet")
-	errCheckpointMissMajority       = errors.New("Need more other tell us need to askforcheckpoint")
-	errMsgNotValid                  = errors.New("msg not valid")
-	errMsgSequenceWrong             = errors.New("msg sequence wrong")
-	errFileOffsetMismatch           = errors.New("file offset mismatch")
-
-	errCheckpointSenderEnded = errors.New("checkpoint sender has beed ended")
-
-	errCheckpointAck     = errors.New("checkpoint sender ack check error")
-	errHeaderLenTooLong  = errors.New("headerlen too long")
-	errChecksumMiss      = errors.New("checksum size error")
-	errReceiverNotFinish = errors.New("cp receiver not finished")
-	errQueueMemExceed    = errors.New("msg queue mem size too large")
 )

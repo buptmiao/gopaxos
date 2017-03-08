@@ -40,7 +40,7 @@ func newConfig(ls LogStorage, logSync bool, syncInterval int, useMembership bool
 
 	for _, follower := range followerList {
 		if follower.MyNode.GetNodeID() == n.GetNodeID() {
-			lPLG1Head("I'm follower, ip %s port %d nodeid %d",
+			lPLGHead("I'm follower, ip %s port %d nodeid %d",
 				n.GetIP(), n.GetPort(), n.GetNodeID())
 			c.isFollower = true
 			c.followToNodeID = follower.FollowNode.GetNodeID()
@@ -54,19 +54,19 @@ func newConfig(ls LogStorage, logSync bool, syncInterval int, useMembership bool
 func (c *config) init() error {
 	err := c.sysVSM.init()
 	if err != nil {
-		lPLG1Err("fail, ret %v", err)
+		lPLGErr("fail, ret %v", err)
 		return err
 	}
 
 	c.sysVSM.addNodeIDList(c.nodeInfoList)
 
-	lPLG1Head(c.groupIdx, "OK")
+	lPLGHead(c.groupIdx, "OK")
 	return nil
 }
 
 func (c *config) checkConfig() bool {
 	if !c.sysVSM.isIMInMembership() {
-		lPLG1Err("my node %d is not in membership", c.myNodeID)
+		lPLGErr("my node %d is not in membership", c.myNodeID)
 		return false
 	}
 

@@ -556,7 +556,7 @@ func (l *learner) onSendCheckpointEnd(checkpointMsg *paxospb.CheckpointMsg) erro
 	smList := l.smFac.getSMList()
 
 	for _, sm := range smList {
-		if sm.SMID() == system_v_smid || sm.SMID() == master_v_smid {
+		if sm.SMID() == system_V_SMID || sm.SMID() == master_V_SMID {
 			//system variables sm no checkpoint
 			//master variables sm no checkpoint
 			continue

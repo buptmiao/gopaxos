@@ -227,20 +227,20 @@ func (i *instance) checkNewValue() {
 
 	if i.conf.isIMFollower() {
 		lPLGErr(i.conf.groupIdx, "I'm follower, skip this new value")
-		i.commitCtx.setResultOnlyRet(paxostrycommitret_follower_cannot_commit)
+		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_Follower_Cannot_Commit)
 		return
 	}
 
 	if !i.conf.checkConfig() {
 		lPLGErr(i.conf.groupIdx, "I'm not in membership, skip this new value")
-		i.commitCtx.setResultOnlyRet(paxostrycommitret_im_not_in_membership)
+		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_IM_Not_In_Membership)
 		return
 	}
 
 	if len(i.commitCtx.getCommitValue()) > getInsideOptionsInstance().getMaxBufferSize() {
 		lPLGErr(i.conf.groupIdx, "value size %d to large, skip this new value",
 			len(i.commitCtx.getCommitValue()))
-		i.commitCtx.setResultOnlyRet(paxostrycommitret_value_size_toolarge)
+		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_Value_Size_TooLarge)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (i *instance) onNewValueCommitTimeout() {
 	i.proposer.exitPrepare()
 	i.proposer.exitAccept()
 
-	i.commitCtx.setResult(paxostrycommitret_timeout, i.proposer.getInstanceID(), "")
+	i.commitCtx.setResult(paxosTryCommitRet_Timeout, i.proposer.getInstanceID(), "")
 }
 
 func (i *instance) onReceiveMessage(msg []byte) error {
@@ -544,14 +544,14 @@ func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 			getBPInstance().OnInstanceLearnedSMExecuteFail()
 
 			lPLGErr(i.conf.groupIdx, "SMExecute fail, instanceid %d, not increase instanceid", i.learner.getInstanceID())
-			i.commitCtx.setResult(paxostrycommitret_executefail, i.learner.getInstanceID(), i.learner.getLearnValue())
+			i.commitCtx.setResult(paxosTryCommitRet_ExecuteFail, i.learner.getInstanceID(), i.learner.getLearnValue())
 
 			i.proposer.cancelSkipPrepare()
 
 			return errInstanceExecuteFailed
 		}
 		//this paxos instance end, tell proposal done
-		i.commitCtx.setResult(paxostrycommitret_ok, i.learner.getInstanceID(), i.learner.getLearnValue())
+		i.commitCtx.setResult(paxosTryCommitRet_Ok, i.learner.getInstanceID(), i.learner.getLearnValue())
 
 		if i.commitTimerID > 0 {
 			i.commitTimerID = i.loop.removeTimer(i.commitTimerID)

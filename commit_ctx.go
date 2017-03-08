@@ -86,7 +86,7 @@ func (c *commitCtx) setResult(commitRet int, instanceID uint64, learnValue []byt
 	c.commitRet = commitRet
 	if c.commitRet == 0 {
 		if !bytes.Equal(learnValue, c.value) {
-			c.commitRet = paxostrycommitret_conflict
+			c.commitRet = paxosTryCommitRet_Conflict
 		}
 	}
 

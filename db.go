@@ -54,13 +54,13 @@ func newDB() *db {
 func (d *db) clearAllLog() error {
 	systemVar, err := d.getSystemVariables()
 	if err != nil {
-		lPLG1Err(d.groupIdx, "GetSystemVariables fail, ret %v", err)
+		lPLGErr(d.groupIdx, "GetSystemVariables fail, ret %v", err)
 		return err
 	}
 
 	masterVar, err := d.getMasterVariables()
 	if err != nil {
-		lPLG1Err(d.groupIdx, "GetMasterVariables fail, ret %v", err)
+		lPLGErr(d.groupIdx, "GetMasterVariables fail, ret %v", err)
 		return err
 	}
 
@@ -74,7 +74,7 @@ func (d *db) clearAllLog() error {
 
 	err = deleteDir(bakPath)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "Delete bak dir fail, dir %s", bakPath)
+		lPLGErr(d.groupIdx, "Delete bak dir fail, dir %s", bakPath)
 		return err
 	}
 
@@ -85,7 +85,7 @@ func (d *db) clearAllLog() error {
 
 	err = d.init(d.dbPath, d.groupIdx)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "Init again fail, ret %v", err)
+		lPLGErr(d.groupIdx, "Init again fail, ret %v", err)
 		return err
 	}
 
@@ -93,14 +93,14 @@ func (d *db) clearAllLog() error {
 	if systemVar != "" {
 		err = d.setSystemVariables(wo, systemVar)
 		if err != nil {
-			lPLG1Err(d.groupIdx, "SetSystemVariables fail, ret %v", err)
+			lPLGErr(d.groupIdx, "SetSystemVariables fail, ret %v", err)
 			return err
 		}
 	}
 	if masterVar != "" {
 		err = d.setMasterVariables(wo, masterVar)
 		if err != nil {
-			lPLG1Err(d.groupIdx, "SetMasterVariables fail, ret %v", err)
+			lPLGErr(d.groupIdx, "SetMasterVariables fail, ret %v", err)
 			return err
 		}
 	}
@@ -124,7 +124,7 @@ func (d *db) init(dbPath string, groupIdx int) error {
 	var err error
 	d.levelDB, err = leveldb.OpenFile(d.dbPath, opt)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "Open leveldb fail, db_path %s, err: %v", d.dbPath, err)
+		lPLGErr(d.groupIdx, "Open leveldb fail, db_path %s, err: %v", d.dbPath, err)
 		return err
 	}
 
@@ -132,13 +132,13 @@ func (d *db) init(dbPath string, groupIdx int) error {
 
 	err = d.valueStore.init(d.dbPath, groupIdx, d)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "value store init fail, ret %v", err)
+		lPLGErr(d.groupIdx, "value store init fail, ret %v", err)
 		return err
 	}
 
 	d.hasInit = true
 
-	lPLG1Imp(d.groupIdx, "OK, db_path %s", d.dbPath)
+	lPLGImp(d.groupIdx, "OK, db_path %s", d.dbPath)
 	return nil
 }
 
@@ -165,7 +165,7 @@ func (d *db) getMaxInstanceIDFileID() (string, uint64, error) {
 			return string(value), 0, ErrNotFoundFromStorage
 		}
 		getBPInstance().LevelDBGetFail()
-		lPLG1Err(d.groupIdx, "LevelDB.Get fail")
+		lPLGErr(d.groupIdx, "LevelDB.Get fail")
 		return "", 0, err
 	}
 
@@ -182,7 +182,7 @@ func (d *db) rebuildOneIndex(instanceID uint64, sFileID string) error {
 	err := d.levelDB.Put([]byte(key), []byte(sFileID), opt)
 	if err != nil {
 		getBPInstance().LevelDBPutFail()
-		lPLG1Err(d.groupIdx, "LevelDB.Put fail, instanceid %d valuelen %d", instanceID, len(sFileID))
+		lPLGErr(d.groupIdx, "LevelDB.Put fail, instanceid %d valuelen %d", instanceID, len(sFileID))
 		return err
 	}
 
@@ -196,11 +196,11 @@ func (d *db) getFromLevelDB(instanceID uint64) (string, error) {
 	if err != nil {
 		if err == leveldb.ErrNotFound {
 			getBPInstance().LevelDBGetNotExist()
-			lPLG1Debug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
+			lPLGDebug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
 			return "", ErrNotFoundFromStorage
 		}
 		getBPInstance().LevelDBGetFail()
-		lPLG1Err(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
+		lPLGErr(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
 		return "", err
 	}
 
@@ -209,12 +209,12 @@ func (d *db) getFromLevelDB(instanceID uint64) (string, error) {
 
 func (d *db) get(instanceID uint64) (string, error) {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return "", errDBNotInit
 	}
 	sFileID, err := d.getFromLevelDB(instanceID)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "get from level db failed", err)
+		lPLGErr(d.groupIdx, "get from level db failed", err)
 		return "", ErrNotFoundFromStorage
 	}
 	value, fileInstanceID, err := d.fileIDToValue(sFileID)
@@ -224,7 +224,7 @@ func (d *db) get(instanceID uint64) (string, error) {
 	}
 
 	if fileInstanceID != instanceID {
-		lPLG1Err(d.groupIdx, "file instanceid %d not equal to key.instanceid %d",
+		lPLGErr(d.groupIdx, "file instanceid %d not equal to key.instanceid %d",
 			fileInstanceID, instanceID)
 		return "", errFileInstanceIDMismatch
 	}
@@ -236,7 +236,7 @@ func (d *db) valueToFileID(wo writeOptions, instanceID uint64, value []byte) (st
 	sFileID, err := d.valueStore.append(wo, instanceID, value)
 	if err != nil {
 		getBPInstance().ValueToFileIDFail()
-		lPLG1Err(d.groupIdx, "fail, ret %v", err)
+		lPLGErr(d.groupIdx, "fail, ret %v", err)
 	}
 	return sFileID, err
 }
@@ -245,7 +245,7 @@ func (d *db) fileIDToValue(sFileID string) (string, uint64, error) {
 	var value string
 	instanceID, err := d.valueStore.read(sFileID, &value)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "fail, ret %v", err)
+		lPLGErr(d.groupIdx, "fail, ret %v", err)
 	}
 	return value, instanceID, err
 }
@@ -262,7 +262,7 @@ func (d *db) putToLevelDB(sync bool, instanceID uint64, value []byte) error {
 	err := d.levelDB.Put([]byte(key), value, opt)
 	if err != nil {
 		getBPInstance().LevelDBPutFail()
-		lPLG1Err(d.groupIdx, "LevelDB.Put fail, instanceid %d valuelen %d", instanceID, len(value))
+		lPLGErr(d.groupIdx, "LevelDB.Put fail, instanceid %d valuelen %d", instanceID, len(value))
 		return err
 	}
 
@@ -273,7 +273,7 @@ func (d *db) putToLevelDB(sync bool, instanceID uint64, value []byte) error {
 
 func (d *db) put(wo writeOptions, instanceID uint64, value []byte) error {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
 	}
 
@@ -287,7 +287,7 @@ func (d *db) put(wo writeOptions, instanceID uint64, value []byte) error {
 
 func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
 	}
 
@@ -295,11 +295,11 @@ func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 	value, err := d.levelDB.Get([]byte(key), nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			lPLG1Debug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
+			lPLGDebug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
 			return ErrNotFoundFromStorage
 		}
 
-		lPLG1Err(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
+		lPLGErr(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
 		return err
 	}
 
@@ -314,7 +314,7 @@ func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 	}
 	err = d.levelDB.Delete([]byte(key), opt)
 	if err != nil {
-		lPLG1Err(d.groupIdx, "LevelDB.Delete fail, instanceid %d", instanceID)
+		lPLGErr(d.groupIdx, "LevelDB.Delete fail, instanceid %d", instanceID)
 		return err
 	}
 
@@ -323,7 +323,7 @@ func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 
 func (d *db) del(wo writeOptions, instanceID uint64) error {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
 	}
 
@@ -333,11 +333,11 @@ func (d *db) del(wo writeOptions, instanceID uint64) error {
 		value, err := d.levelDB.Get([]byte(key), nil)
 		if err != nil {
 			if err == leveldb.ErrNotFound {
-				lPLG1Debug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
+				lPLGDebug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
 				return nil
 			}
 
-			lPLG1Err(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
+			lPLGErr(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
 			return err
 		}
 
@@ -351,7 +351,7 @@ func (d *db) del(wo writeOptions, instanceID uint64) error {
 		Sync: wo,
 	}
 	if err := d.levelDB.Delete([]byte(key), opt); err != nil {
-		lPLG1Err(d.groupIdx, "LevelDB.Delete fail, instanceid %d", instanceID)
+		lPLGErr(d.groupIdx, "LevelDB.Delete fail, instanceid %d", instanceID)
 		return err
 	}
 
@@ -390,18 +390,18 @@ func (d *db) getInstanceIDFromKey(key string) uint64 {
 
 func (d *db) getMinChosenInstanceID() (uint64, error) {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return 0, errDBNotInit
 	}
 
 	value, err := d.getFromLevelDB(getMinKey)
 	if err != nil && err != leveldb.ErrNotFound {
-		lPLG1Err(d.groupIdx, "fail, error: %v", err)
+		lPLGErr(d.groupIdx, "fail, error: %v", err)
 		return 0, err
 	}
 
 	if err == leveldb.ErrNotFound {
-		lPLG1Err(d.groupIdx, "no min chosen instanceid")
+		lPLGErr(d.groupIdx, "no min chosen instanceid")
 		return 0, nil
 	}
 
@@ -409,26 +409,26 @@ func (d *db) getMinChosenInstanceID() (uint64, error) {
 	if d.valueStore.isValidFileID(sFileID) {
 		value, err = d.get(getMinKey)
 		if err != nil && err != leveldb.ErrNotFound {
-			lPLG1Err(d.groupIdx, "Get from log store fail, ret %v", err)
+			lPLGErr(d.groupIdx, "Get from log store fail, ret %v", err)
 			return 0, err
 		}
 	}
 
 	if len(value) != 8 {
-		lPLG1Err(d.groupIdx, "fail, mininstanceid size wrong")
+		lPLGErr(d.groupIdx, "fail, mininstanceid size wrong")
 		return 0, errInstanceIDSizeWrong
 	}
 
 	minInstanceID := binary.LittleEndian.Uint64(value)
 
-	lPLG1Imp(d.groupIdx, "ok, min chosen instanceid %d", minInstanceID)
+	lPLGImp(d.groupIdx, "ok, min chosen instanceid %d", minInstanceID)
 
 	return minInstanceID, nil
 }
 
 func (d *db) setMinChosenInstanceID(wo writeOptions, minInstanceID uint64) error {
 	if !d.hasInit {
-		lPLG1Err(d.groupIdx, "no init yet")
+		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
 	}
 
@@ -439,7 +439,7 @@ func (d *db) setMinChosenInstanceID(wo writeOptions, minInstanceID uint64) error
 		return err
 	}
 
-	lPLG1Imp(d.groupIdx, "ok, min chosen instanceid %d", minInstanceID)
+	lPLGImp(d.groupIdx, "ok, min chosen instanceid %d", minInstanceID)
 
 	return nil
 }
@@ -470,7 +470,7 @@ func (d *db) close() {
 		d.levelDB.Close()
 		d.levelDB = nil
 	}
-	lPLG1Head(d.groupIdx, "LevelDB Deleted. Path %s", d.dbPath)
+	lPLGHead(d.groupIdx, "LevelDB Deleted. Path %s", d.dbPath)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

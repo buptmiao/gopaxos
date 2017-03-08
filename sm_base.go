@@ -22,19 +22,19 @@ func newSMFac(groupIdx int) *smFac {
 
 func (s *smFac) execute(groupIdx int, instanceID uint64, paxosValue []byte, ctx *SMCtx) bool {
 	if len(paxosValue) < 8 {
-		lPLG1Err(s.groupIdx, "Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
+		lPLGErr(s.groupIdx, "Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
 		return true
 	}
 
 	smID := binary.LittleEndian.Uint64(paxosValue)
 	if smID == 0 {
-		lPLG1Imp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	bodyValue := paxosValue[8:]
 
-	if smID == batch_propose_smid {
+	if smID == batch_Propose_SMID {
 		var batSMCtx *batchSMCtx
 		if ctx != nil && ctx.Ctx != nil {
 			batSMCtx = ctx.Ctx.(*batchSMCtx)
@@ -49,13 +49,13 @@ func (s *smFac) batchExecute(groupIdx int, instanceID uint64, bodyValue []byte, 
 	batchValue := &paxospb.BatchPaxosValues{}
 	err := batchValue.Unmarshal(bodyValue)
 	if err != nil {
-		lPLG1Err("Unmarshal fail, valuesize %d", len(bodyValue))
+		lPLGErr("Unmarshal fail, valuesize %d", len(bodyValue))
 		return false
 	}
 
 	if ctx != nil {
 		if len(ctx.smCtxList) != len(batchValue.GetValues()) {
-			lPLG1Err("values size %d not equal to smctx size %d",
+			lPLGErr("values size %d not equal to smctx size %d",
 				len(batchValue.GetValues()), len(ctx.smCtxList))
 			return false
 		}
@@ -78,12 +78,12 @@ func (s *smFac) batchExecute(groupIdx int, instanceID uint64, bodyValue []byte, 
 
 func (s *smFac) doExecute(groupIdx int, instanceID uint64, value []byte, smID int64, ctx *SMCtx) bool {
 	if smID == 0 {
-		lPLG1Imp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	if len(s.smList) == 0 {
-		lPLG1Imp("No any sm, need wait sm, instanceid %d", instanceID)
+		lPLGImp("No any sm, need wait sm, instanceid %d", instanceID)
 		return false
 	}
 
@@ -93,25 +93,25 @@ func (s *smFac) doExecute(groupIdx int, instanceID uint64, value []byte, smID in
 		}
 	}
 
-	lPLG1Err("Unknown smid %d instanceid %d", smID, instanceID)
+	lPLGErr("Unknown smid %d instanceid %d", smID, instanceID)
 	return false
 }
 
 func (s *smFac) executeForCheckpoint(groupIdx int, instanceID uint64, paxosValue []byte) bool {
 	if len(paxosValue) < 8 {
-		lPLG1Err("Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
+		lPLGErr("Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
 		//need do nothing, just skip
 		return true
 	}
 
 	smID := binary.LittleEndian.Uint64(paxosValue)
 	if smID == 0 {
-		lPLG1Imp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	bodyValue := paxosValue[8:]
-	if smID == batch_propose_smid {
+	if smID == batch_Propose_SMID {
 		s.batchExecuteForCheckpoint(groupIdx, instanceID, bodyValue)
 	}
 
@@ -122,7 +122,7 @@ func (s *smFac) batchExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyV
 	batchValue := &paxospb.BatchPaxosValues{}
 	err := batchValue.Unmarshal(bodyValue)
 	if err != nil {
-		lPLG1Err("Unmarshal fail, valuesize %d", len(bodyValue))
+		lPLGErr("Unmarshal fail, valuesize %d", len(bodyValue))
 		return false
 	}
 
@@ -138,12 +138,12 @@ func (s *smFac) batchExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyV
 
 func (s *smFac) doExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyValue []byte, smID int64) bool {
 	if smID == 0 {
-		lPLG1Imp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	if len(s.smList) == 0 {
-		lPLG1Imp("No any sm, need wait sm, instanceid %d", instanceID)
+		lPLGImp("No any sm, need wait sm, instanceid %d", instanceID)
 		return false
 	}
 
@@ -153,7 +153,7 @@ func (s *smFac) doExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyValu
 		}
 	}
 
-	lPLG1Err("Unknown smid %d instanceid %d", smID, instanceID)
+	lPLGErr("Unknown smid %d instanceid %d", smID, instanceID)
 	return false
 }
 
@@ -177,7 +177,7 @@ func (s *smFac) getCheckpointInstanceID(groupIdx int) uint64 {
 	cpInstanceID, cpInstanceIDInsize, haveUseSM := -1, -1, false
 	for _, sm := range s.smList {
 		checkpointInstanceID := sm.GetCheckpointInstanceID(groupIdx)
-		if sm.SMID() == system_v_smid || sm.SMID() == master_v_smid {
+		if sm.SMID() == system_V_SMID || sm.SMID() == master_V_SMID {
 			//system variables
 			//master variables
 			//if no user state machine, system and master's can use.
@@ -220,7 +220,7 @@ func (s *smFac) beforePropose(groupIdx int, value []byte) []byte {
 		return value
 	}
 
-	if smID == batch_propose_smid {
+	if smID == batch_Propose_SMID {
 		return s.beforeBatchPropose(groupIdx, value)
 	}
 	bodyValue := value[8:]
@@ -256,7 +256,7 @@ func (s *smFac) beforeBatchPropose(groupIdx int, value []byte) []byte {
 	if change {
 		data, err := batchValue.Marshal()
 		if err != nil {
-			lPLG1Err(groupIdx, "Marshal error %v", err)
+			lPLGErr(groupIdx, "Marshal error %v", err)
 			return value
 		}
 		return append(value[:8], data...)

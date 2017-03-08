@@ -30,14 +30,14 @@ func (c *committer) newValue(value []byte) int {
 func (c *committer) newValueGetID(value []byte, smCtx *SMCtx) (uint64, int) {
 	getBPInstance().NewValue()
 
-	ret := paxostrycommitret_ok
+	ret := paxosTryCommitRet_Ok
 	var instanceID uint64
 	for retryCount := 3; retryCount > 0; retryCount-- {
 		ts := timeStat(0)
 		ts.point()
 
 		instanceID, ret = c.newValueGetIDNoRetry(value, smCtx)
-		if ret != paxostrycommitret_conflict {
+		if ret != paxosTryCommitRet_Conflict {
 			if ret == 0 {
 				getBPInstance().NewValueCommitOK(ts.point())
 			} else {
@@ -49,7 +49,7 @@ func (c *committer) newValueGetID(value []byte, smCtx *SMCtx) (uint64, int) {
 
 		getBPInstance().NewValueConflict()
 
-		if smCtx != nil && smCtx.SMID == master_v_smid {
+		if smCtx != nil && smCtx.SMID == master_V_SMID {
 			//master sm not retry
 			break
 		}
@@ -66,11 +66,11 @@ func (c *committer) newValueGetIDNoRetry(value []byte, smCtx *SMCtx) (uint64, in
 		if lockUseTimeMs > 0 {
 			getBPInstance().NewValueGetLockTimeout()
 			lPLGErr(c.conf.groupIdx, "Try get lock, but timeout, lockusetime %dms", lockUseTimeMs)
-			return 0, paxostrycommitret_timeout
+			return 0, paxosTryCommitRet_Timeout
 		} else {
 			getBPInstance().NewValueGetLockReject()
 			lPLGErr(c.conf.groupIdx, "Try get lock, but too many thread waiting, reject")
-			return 0, paxostrycommitret_toomanythreadwaiting_reject
+			return 0, paxosTryCommitRet_TooManyThreadWaiting_Reject
 		}
 	}
 
@@ -86,7 +86,7 @@ func (c *committer) newValueGetIDNoRetry(value []byte, smCtx *SMCtx) (uint64, in
 			lPLGErr(c.conf.groupIdx, "Get lock ok, but lockusetime %dms too long, lefttimeout %dms", lockUseTimeMs, leftTimeoutMs)
 			getBPInstance().NewValueGetLockTimeout()
 
-			return 0, paxostrycommitret_timeout
+			return 0, paxosTryCommitRet_Timeout
 		}
 	}
 
