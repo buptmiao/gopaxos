@@ -9,7 +9,7 @@ type checkpointMgr struct {
 	minChosenInstanceID      uint64
 	maxChosenInstanceID      uint64
 	inAskForCPMode           bool
-	needAckSet               map[nodeId]struct{}
+	needAckSet               map[uint64]struct{}
 	lastAskForCheckpointTime uint64
 	useCheckpointRePlayer    bool
 }
@@ -63,7 +63,7 @@ func (c *checkpointMgr) getCleaner() *cleaner {
 	return c.cleaner
 }
 
-func (c *checkpointMgr) prepareForAskForCheckpoint(sendNodeID nodeId) error {
+func (c *checkpointMgr) prepareForAskForCheckpoint(sendNodeID uint64) error {
 	if _, ok := c.needAckSet[sendNodeID]; !ok {
 		c.needAckSet[sendNodeID] = struct{}{}
 	}

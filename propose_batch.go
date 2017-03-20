@@ -10,7 +10,7 @@ type pendingProposal struct {
 	value          []byte
 	ctx            *SMCtx
 	instanceID     *uint64
-	batchIndex     *uint32
+	batchIndex     *int32
 	notifier       *notifier
 	absEnqueueTime uint64
 }
@@ -86,7 +86,7 @@ func (p *proposeBatch) run() {
 		}
 
 		if needSleepTime > 0 {
-			p.slock.waitTime(time.Millisecond * needSleepTime)
+			p.slock.waitTime(time.Millisecond * time.Duration(needSleepTime))
 		}
 
 		p.slock.unlock()
@@ -99,7 +99,7 @@ func (p *proposeBatch) run() {
 	for p.queue.Len() > 0 {
 		pp := p.queue.Remove(p.queue.Front()).(*pendingProposal)
 
-		pp.notifier.SendNotify(paxos_SystemError)
+		pp.notifier.SendNotify(errPaxosSystemError)
 	}
 
 	lPLGHead(p.groupIdx, "Ended.")
@@ -127,9 +127,9 @@ func (p *proposeBatch) setBatchDelayTimeMs(batchDelayTimeMs int) {
 	p.batchDelayTimeMs = batchDelayTimeMs
 }
 
-func (p *proposeBatch) propose(value []byte, instanceID *uint64, batchIdx *uint32, ctx *SMCtx) int {
+func (p *proposeBatch) propose(value []byte, instanceID *uint64, batchIdx *int32, ctx *SMCtx) error {
 	if p.isEnd {
-		return paxos_SystemError
+		return errPaxosSystemError
 	}
 
 	getBPInstance().BatchPropose()
@@ -138,14 +138,14 @@ func (p *proposeBatch) propose(value []byte, instanceID *uint64, batchIdx *uint3
 
 	p.addProposal(value, instanceID, batchIdx, ctx, notifier)
 
-	ret := notifier.WaitNotify()
-	if ret == paxosTryCommitRet_Ok {
+	err := notifier.WaitNotify()
+	if err == nil {
 		getBPInstance().BatchProposeOK()
 	} else {
 		getBPInstance().BatchProposeFail()
 	}
 
-	return ret
+	return err
 }
 
 func (p *proposeBatch) needBatch() bool {
@@ -156,12 +156,12 @@ func (p *proposeBatch) needBatch() bool {
 	if p.queue.Len() > 0 {
 		pp := p.queue.Front().Value.(*pendingProposal)
 		now := getSteadyClockMS()
-		passTime := 0
+		var passTime uint64
 		if now > pp.absEnqueueTime {
 			passTime = now - pp.absEnqueueTime
 		}
 
-		if passTime > p.batchDelayTimeMs {
+		if passTime > uint64(p.batchDelayTimeMs) {
 			return true
 		}
 	}
@@ -169,7 +169,7 @@ func (p *proposeBatch) needBatch() bool {
 	return false
 }
 
-func (p *proposeBatch) addProposal(value []byte, instanceID *uint64, batchIdx *uint32, ctx *SMCtx, noti *notifier) {
+func (p *proposeBatch) addProposal(value []byte, instanceID *uint64, batchIdx *int32, ctx *SMCtx, noti *notifier) {
 	p.slock.lock()
 	defer p.slock.unlock()
 
@@ -206,11 +206,11 @@ func (p *proposeBatch) pluckProposal() []*pendingProposal {
 		pluckSize += len(pp.value)
 		p.nowQueueValueSize -= len(pp.value)
 
-		proposalWaitTime := 0
+		var proposalWaitTime uint64
 		if now > pp.absEnqueueTime {
 			proposalWaitTime = now - pp.absEnqueueTime
 		}
-		getBPInstance().BatchProposeWaitTimeMs(proposalWaitTime)
+		getBPInstance().BatchProposeWaitTimeMs(int(proposalWaitTime))
 
 		p.queue.Remove(e)
 
@@ -227,9 +227,9 @@ func (p *proposeBatch) pluckProposal() []*pendingProposal {
 }
 
 func (p *proposeBatch) onlyOnePropose(pp *pendingProposal) {
-	var ret int
-	*pp.instanceID, ret = p.paxosNode.Propose(p.groupIdx, pp.value, pp.ctx)
-	pp.notifier.SendNotify(ret)
+	var err error
+	*pp.instanceID, err = p.paxosNode.Propose(p.groupIdx, pp.value, pp.ctx)
+	pp.notifier.SendNotify(err)
 }
 
 func (p *proposeBatch) doProposal(ps []*pendingProposal) {
@@ -262,24 +262,23 @@ func (p *proposeBatch) doProposal(ps []*pendingProposal) {
 	ctx.SMID = batch_Propose_SMID
 	ctx.Ctx = batchSMCtx
 
-	var ret int
 	var instanceID uint64
 
 	bytes, err := batchValue.Marshal()
 	if err == nil {
 		//FIXME return err not ret
-		instanceID, ret = p.paxosNode.Propose(p.groupIdx, bytes, ctx)
-		if ret != 0 {
-			lPLGErr(p.groupIdx, "real propose fail, error: %v", RetErrMap[ret])
+		instanceID, err = p.paxosNode.Propose(p.groupIdx, bytes, ctx)
+		if err != nil {
+			lPLGErr(p.groupIdx, "real propose fail, error: %v", err)
 		}
 	} else {
 		lPLGErr(p.groupIdx, "BatchValues Marshal fail")
-		ret = paxos_SystemError
+		err = errPaxosSystemError
 	}
 
 	for i, pp := range ps {
-		*pp.batchIndex = i
+		*pp.batchIndex = int32(i)
 		*pp.instanceID = instanceID
-		pp.notifier.SendNotify(ret)
+		pp.notifier.SendNotify(err)
 	}
 }

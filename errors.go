@@ -52,6 +52,7 @@ var (
 	errCheckpointMissMajority       = errors.New("Need more other tell us need to askforcheckpoint")
 	errMsgNotValid                  = errors.New("msg not valid")
 	errMsgSequenceWrong             = errors.New("msg sequence wrong")
+	errMsgSizeTooSmall              = errors.New("msg size too small")
 	errFileOffsetMismatch           = errors.New("file offset mismatch")
 	errCheckpointSenderEnded        = errors.New("checkpoint sender has beed ended")
 
@@ -61,27 +62,27 @@ var (
 	errReceiverNotFinish = errors.New("cp receiver not finished")
 	errQueueMemExceed    = errors.New("msg queue mem size too large")
 
-	errPaxosSystemError                = newPaxosError(paxos_SystemError, "system error")
-	errGroupIdxWrong                   = newPaxosError(paxos_GroupIdxWrong, "group index wrong")
-	errMembershipOpGidNotSame          = newPaxosError(paxos_MembershipOp_GidNotSame, "membership operation, gid not same")
-	errMembershipOpVersionConflict     = newPaxosError(paxos_MembershipOp_VersionConflit, "membership operation, version conflict")
-	errMembershipOpNoGid               = newPaxosError(paxos_MembershipOp_NoGid, "membership operation, no gid")
-	errMembershipOpNodeExists          = newPaxosError(paxos_MembershipOp_Add_NodeExist, "membership operation, node already exists")
-	errMembershipOpRemoveNodeNotExists = newPaxosError(paxos_MembershipOp_Remove_NodeNotExist, "membership operation, node does not exists")
-	errMembershipOpNoChange            = newPaxosError(paxos_MembershipOp_Change_NoChange, "membership operation, no changes happen")
-	errValueNotExists                  = newPaxosError(paxos_GetInstanceValue_Value_NotExist, "get instance value, value not exists")
-	errValueNotChosenYet               = newPaxosError(paxos_GetInstanceValue_Value_Not_Chosen_Yet, "get instance value, value not be chosen yet")
+	errPaxosSystemError                = newPaxosError(int32(paxos_SystemError), "system error")
+	errGroupIdxWrong                   = newPaxosError(int32(paxos_GroupIdxWrong), "group index wrong")
+	errMembershipOpGidNotSame          = newPaxosError(int32(paxos_MembershipOp_GidNotSame), "membership operation, gid not same")
+	errMembershipOpVersionConflict     = newPaxosError(int32(paxos_MembershipOp_VersionConflit), "membership operation, version conflict")
+	errMembershipOpNoGid               = newPaxosError(int32(paxos_MembershipOp_NoGid), "membership operation, no gid")
+	errMembershipOpNodeExists          = newPaxosError(int32(paxos_MembershipOp_Add_NodeExist), "membership operation, node already exists")
+	errMembershipOpRemoveNodeNotExists = newPaxosError(int32(paxos_MembershipOp_Remove_NodeNotExist), "membership operation, node does not exists")
+	errMembershipOpNoChange            = newPaxosError(int32(paxos_MembershipOp_Change_NoChange), "membership operation, no changes happen")
+	errValueNotExists                  = newPaxosError(int32(paxos_GetInstanceValue_Value_NotExist), "get instance value, value not exists")
+	errValueNotChosenYet               = newPaxosError(int32(paxos_GetInstanceValue_Value_Not_Chosen_Yet), "get instance value, value not be chosen yet")
 )
 
 var RetErrMap map[int32]error = map[int32]error{
-	paxos_SystemError:                           errPaxosSystemError,
-	paxos_GroupIdxWrong:                         errGroupIdxWrong,
-	paxos_MembershipOp_GidNotSame:               errMembershipOpGidNotSame,
-	paxos_MembershipOp_VersionConflit:           errMembershipOpVersionConflict,
-	paxos_MembershipOp_NoGid:                    errMembershipOpNoGid,
-	paxos_MembershipOp_Add_NodeExist:            errMembershipOpNodeExists,
-	paxos_MembershipOp_Remove_NodeNotExist:      errMembershipOpRemoveNodeNotExists,
-	paxos_MembershipOp_Change_NoChange:          errMembershipOpNoChange,
-	paxos_GetInstanceValue_Value_NotExist:       errValueNotExists,
-	paxos_GetInstanceValue_Value_Not_Chosen_Yet: errValueNotChosenYet,
+	int32(paxos_SystemError):                           errPaxosSystemError,
+	int32(paxos_GroupIdxWrong):                         errGroupIdxWrong,
+	int32(paxos_MembershipOp_GidNotSame):               errMembershipOpGidNotSame,
+	int32(paxos_MembershipOp_VersionConflit):           errMembershipOpVersionConflict,
+	int32(paxos_MembershipOp_NoGid):                    errMembershipOpNoGid,
+	int32(paxos_MembershipOp_Add_NodeExist):            errMembershipOpNodeExists,
+	int32(paxos_MembershipOp_Remove_NodeNotExist):      errMembershipOpRemoveNodeNotExists,
+	int32(paxos_MembershipOp_Change_NoChange):          errMembershipOpNoChange,
+	int32(paxos_GetInstanceValue_Value_NotExist):       errValueNotExists,
+	int32(paxos_GetInstanceValue_Value_Not_Chosen_Yet): errValueNotChosenYet,
 }

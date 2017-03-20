@@ -3,6 +3,7 @@ package gopaxos
 import (
 	"encoding/binary"
 	"net"
+	"os"
 )
 
 // Options is the global config of paxos.
@@ -145,17 +146,15 @@ func NewOptions() *Options {
 	}
 }
 
-type nodeId uint64
-
 const nullNode = uint64(0)
 
 type NodeInfo struct {
-	iNodeId nodeId
+	iNodeId uint64
 	sIP     string
 	iPort   int
 }
 
-func NewNodeInfo(iNodeId nodeId, ip string, port int) *NodeInfo {
+func NewNodeInfo(iNodeId uint64, ip string, port int) *NodeInfo {
 	return &NodeInfo{
 		iNodeId: iNodeId,
 		sIP:     ip,
@@ -163,7 +162,7 @@ func NewNodeInfo(iNodeId nodeId, ip string, port int) *NodeInfo {
 	}
 }
 
-func (n *NodeInfo) GetNodeID() nodeId {
+func (n *NodeInfo) GetNodeID() uint64 {
 	return n.iNodeId
 }
 
@@ -182,20 +181,27 @@ func (n *NodeInfo) SetIPPort(ip string, port int) *NodeInfo {
 	return n
 }
 
-func (n *NodeInfo) SetNodeID(iNodeId nodeId) *NodeInfo {
+func (n *NodeInfo) SetNodeID(iNodeId uint64) *NodeInfo {
 	n.iNodeId = iNodeId
 	n.parseNodeID()
 	return n
 }
 
 func (n *NodeInfo) makeNodeID() {
+	if n.sIP == "" {
+		n.sIP = "0.0.0.0"
+	}
 	bip := net.ParseIP(n.sIP).To4()
+	if len(bip) < 4 {
+		lPLErr("ip format error: %s", n.sIP)
+		os.Exit(1)
+	}
 	iip := uint64(binary.LittleEndian.Uint32(bip))
-	n.iNodeId = (iip << 32) | n.iPort
+	n.iNodeId = uint64((iip << 32) | uint64(n.iPort))
 }
 
 func (n *NodeInfo) parseNodeID() {
-	n.iPort = n.iNodeId & 0xFFFFFFFF
+	n.iPort = int(n.iNodeId) & 0xFFFFFFFF
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, uint32(n.iNodeId>>32))
 	n.sIP = net.IPv4(buf[0], buf[1], buf[2], buf[3]).String()
@@ -206,8 +212,8 @@ type FollowerNodeInfo struct {
 	FollowNode NodeInfo
 }
 
-type NodeInfoList []NodeInfo
-type FollowerNodeInfoList []FollowerNodeInfo
+type NodeInfoList []*NodeInfo
+type FollowerNodeInfoList []*FollowerNodeInfo
 
 type GroupSMInfo struct {
 	//required
@@ -232,5 +238,5 @@ func NewGroupInfo() *GroupSMInfo {
 	}
 }
 
-type GroupSMInfoList []GroupSMInfo
+type GroupSMInfoList []*GroupSMInfo
 type MembershipChangeCallback func(int, NodeInfoList)

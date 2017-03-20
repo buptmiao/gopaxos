@@ -45,8 +45,8 @@ func (m *masterVariableStore) read(groupIdx int) (*paxospb.MasterVariables, erro
 	err = mVar.Unmarshal(value)
 	if err != nil {
 		lPLGErr(groupIdx, "Variables.Unmarshal fail, bufferlen %d", len(value))
-		return err
+		return nil, err
 	}
 
-	return nil
+	return mVar, nil
 }

@@ -3,6 +3,7 @@ package gopaxos
 import (
 	"encoding/binary"
 	"github.com/buptmiao/gopaxos/paxospb"
+	"math"
 )
 
 type batchSMCtx struct {
@@ -26,9 +27,9 @@ func (s *smFac) execute(groupIdx int, instanceID uint64, paxosValue []byte, ctx 
 		return true
 	}
 
-	smID := binary.LittleEndian.Uint64(paxosValue)
+	smID := int64(binary.LittleEndian.Uint64(paxosValue))
 	if smID == 0 {
-		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
@@ -49,13 +50,13 @@ func (s *smFac) batchExecute(groupIdx int, instanceID uint64, bodyValue []byte, 
 	batchValue := &paxospb.BatchPaxosValues{}
 	err := batchValue.Unmarshal(bodyValue)
 	if err != nil {
-		lPLGErr("Unmarshal fail, valuesize %d", len(bodyValue))
+		lPLGErr(s.groupIdx, "Unmarshal fail, valuesize %d", len(bodyValue))
 		return false
 	}
 
 	if ctx != nil {
 		if len(ctx.smCtxList) != len(batchValue.GetValues()) {
-			lPLGErr("values size %d not equal to smctx size %d",
+			lPLGErr(s.groupIdx, "values size %d not equal to smctx size %d",
 				len(batchValue.GetValues()), len(ctx.smCtxList))
 			return false
 		}
@@ -78,12 +79,12 @@ func (s *smFac) batchExecute(groupIdx int, instanceID uint64, bodyValue []byte, 
 
 func (s *smFac) doExecute(groupIdx int, instanceID uint64, value []byte, smID int64, ctx *SMCtx) bool {
 	if smID == 0 {
-		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	if len(s.smList) == 0 {
-		lPLGImp("No any sm, need wait sm, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "No any sm, need wait sm, instanceid %d", instanceID)
 		return false
 	}
 
@@ -93,20 +94,20 @@ func (s *smFac) doExecute(groupIdx int, instanceID uint64, value []byte, smID in
 		}
 	}
 
-	lPLGErr("Unknown smid %d instanceid %d", smID, instanceID)
+	lPLGErr(s.groupIdx, "Unknown smid %d instanceid %d", smID, instanceID)
 	return false
 }
 
 func (s *smFac) executeForCheckpoint(groupIdx int, instanceID uint64, paxosValue []byte) bool {
 	if len(paxosValue) < 8 {
-		lPLGErr("Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
+		lPLGErr(s.groupIdx, "Value wrong, instanceid %d size %d", instanceID, len(paxosValue))
 		//need do nothing, just skip
 		return true
 	}
 
-	smID := binary.LittleEndian.Uint64(paxosValue)
+	smID := int64(binary.LittleEndian.Uint64(paxosValue))
 	if smID == 0 {
-		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
@@ -122,7 +123,7 @@ func (s *smFac) batchExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyV
 	batchValue := &paxospb.BatchPaxosValues{}
 	err := batchValue.Unmarshal(bodyValue)
 	if err != nil {
-		lPLGErr("Unmarshal fail, valuesize %d", len(bodyValue))
+		lPLGErr(s.groupIdx, "Unmarshal fail, valuesize %d", len(bodyValue))
 		return false
 	}
 
@@ -138,12 +139,12 @@ func (s *smFac) batchExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyV
 
 func (s *smFac) doExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyValue []byte, smID int64) bool {
 	if smID == 0 {
-		lPLGImp("Value no need to do sm, just skip, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "Value no need to do sm, just skip, instanceid %d", instanceID)
 		return true
 	}
 
 	if len(s.smList) == 0 {
-		lPLGImp("No any sm, need wait sm, instanceid %d", instanceID)
+		lPLGImp(s.groupIdx, "No any sm, need wait sm, instanceid %d", instanceID)
 		return false
 	}
 
@@ -153,7 +154,7 @@ func (s *smFac) doExecuteForCheckpoint(groupIdx int, instanceID uint64, bodyValu
 		}
 	}
 
-	lPLGErr("Unknown smid %d instanceid %d", smID, instanceID)
+	lPLGErr(s.groupIdx, "Unknown smid %d instanceid %d", smID, instanceID)
 	return false
 }
 
@@ -173,8 +174,9 @@ func (s *smFac) addSM(sm StateMachine) {
 }
 
 func (s *smFac) getCheckpointInstanceID(groupIdx int) uint64 {
-
-	cpInstanceID, cpInstanceIDInsize, haveUseSM := -1, -1, false
+	haveUseSM := false
+	var cpInstanceID uint64 = math.MaxUint64
+	var cpInstanceIDInsize uint64 = math.MaxUint64
 	for _, sm := range s.smList {
 		checkpointInstanceID := sm.GetCheckpointInstanceID(groupIdx)
 		if sm.SMID() == system_V_SMID || sm.SMID() == master_V_SMID {
@@ -182,11 +184,11 @@ func (s *smFac) getCheckpointInstanceID(groupIdx int) uint64 {
 			//master variables
 			//if no user state machine, system and master's can use.
 			//if have user state machine, use user'state machine's checkpointinstanceid.
-			if checkpointInstanceID == uint64(-1) {
+			if checkpointInstanceID == math.MaxUint64 {
 				continue
 			}
 
-			if checkpointInstanceID > cpInstanceIDInsize || cpInstanceIDInsize == uint64(-1) {
+			if checkpointInstanceID > cpInstanceIDInsize || cpInstanceIDInsize == math.MaxUint64 {
 				cpInstanceIDInsize = checkpointInstanceID
 			}
 
@@ -195,11 +197,11 @@ func (s *smFac) getCheckpointInstanceID(groupIdx int) uint64 {
 
 		haveUseSM = true
 
-		if checkpointInstanceID == uint64(-1) {
+		if checkpointInstanceID == math.MaxUint64 {
 			continue
 		}
 
-		if checkpointInstanceID > cpInstanceID || cpInstanceID == uint64(-1) {
+		if checkpointInstanceID > cpInstanceID || cpInstanceID == math.MaxUint64 {
 			cpInstanceID = checkpointInstanceID
 		}
 	}
@@ -215,7 +217,7 @@ func (s *smFac) getSMList() []StateMachine {
 }
 
 func (s *smFac) beforePropose(groupIdx int, value []byte) []byte {
-	smID := binary.LittleEndian.Uint64(value)
+	smID := int64(binary.LittleEndian.Uint64(value))
 	if smID == 0 {
 		return value
 	}

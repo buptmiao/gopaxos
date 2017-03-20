@@ -10,15 +10,15 @@ import (
 // learner implements the interface base.
 type learner struct {
 	base
-	state                      learnerState
+	state                      *learnerState
 	acceptor                   *acceptor
 	paxosLog                   *paxosLog
 	askForLearnNoopTimerID     uint32
 	loop                       *ioLoop
 	highestSeenInstanceID      uint64
-	highestSeenInstanceIDOwner nodeId
+	highestSeenInstanceIDOwner uint64
 	isIMLearning               bool
-	learnerSender              learnerSender
+	learnerSender              *learnerSender
 	lastAckInstanceID          uint64
 	cpMgr                      *checkpointMgr
 	smFac                      *smFac
@@ -95,23 +95,23 @@ func (l *learner) getSeenLatestInstanceID() uint64 {
 	return l.highestSeenInstanceID
 }
 
-func (l *learner) setSeenInstanceID(instanceID uint64, fromNodeID nodeId) {
+func (l *learner) setSeenInstanceID(instanceID uint64, fromNodeID uint64) {
 	if instanceID > l.highestSeenInstanceID {
 		l.highestSeenInstanceID = instanceID
 		l.highestSeenInstanceIDOwner = fromNodeID
 	}
 }
 
-func (l *learner) resetAskForLearnNoop(timeout int) {
+func (l *learner) resetAskForLearnNoop(timeout int64) {
 	if l.askForLearnNoopTimerID > 0 {
 		l.askForLearnNoopTimerID = l.loop.removeTimer(l.askForLearnNoopTimerID)
 	}
 
-	l.loop.addTimer(timeout, timer_Learner_AskForLearn_Noop, l.askForLearnNoopTimerID)
+	l.askForLearnNoopTimerID, _ = l.loop.addTimer(int(timeout), timer_Learner_AskForLearn_Noop)
 }
 
 func (l *learner) askForLearnNoop(isStart bool) {
-	l.resetAskForLearnNoop(getInsideOptionsInstance().getAskforLearnInterval())
+	l.resetAskForLearnNoop(int64(getInsideOptionsInstance().getAskforLearnInterval()))
 
 	l.isIMLearning = false
 	l.cpMgr.exitCheckpointMode()
@@ -131,7 +131,7 @@ func (l *learner) askForLearn() {
 	paxosMsg := &paxospb.PaxosMsg{}
 	paxosMsg.InstanceID = l.getInstanceID()
 	paxosMsg.NodeID = l.conf.getMyNodeID()
-	paxosMsg.MsgType = msgType_PaxosLearner_AskforLearn
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_AskforLearn)
 
 	if l.conf.isIMFollower() {
 		//this is not proposal nodeid, just use this val to bring followto nodeid info.
@@ -155,7 +155,7 @@ func (l *learner) onAskForLearn(paxosMsg *paxospb.PaxosMsg) {
 
 	if paxosMsg.GetProposalNodeID() == l.conf.getMyNodeID() {
 		//Found a node follow me.
-		lPLImp(l.conf.groupIdx, "Found a node %d follow me.", paxosMsg.GetNodeID())
+		lPLGImp(l.conf.groupIdx, "Found a node %d follow me.", paxosMsg.GetNodeID())
 		l.conf.addFollowerNode(paxosMsg.GetNodeID())
 	}
 
@@ -186,13 +186,13 @@ func (l *learner) onAskForLearn(paxosMsg *paxospb.PaxosMsg) {
 	l.sendNowInstanceID(paxosMsg.GetInstanceID(), paxosMsg.GetNodeID())
 }
 
-func (l *learner) sendNowInstanceID(instanceID uint64, sendNodeID nodeId) {
+func (l *learner) sendNowInstanceID(instanceID uint64, sendNodeID uint64) {
 	getBPInstance().SendNowInstanceID()
 
 	paxosMsg := &paxospb.PaxosMsg{}
 	paxosMsg.InstanceID = instanceID
 	paxosMsg.NodeID = l.conf.getMyNodeID()
-	paxosMsg.MsgType = msgType_PaxosLearner_SendNowInstanceID
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_SendNowInstanceID)
 	paxosMsg.NowInstanceID = l.getInstanceID()
 	paxosMsg.MinChosenInstanceID = l.cpMgr.getMinChosenInstanceID()
 
@@ -260,7 +260,7 @@ func (l *learner) onSendNowInstanceID(paxosMsg *paxospb.PaxosMsg) {
 	}
 }
 
-func (l *learner) confirmAskForLearn(sendNodeID nodeId) {
+func (l *learner) confirmAskForLearn(sendNodeID uint64) {
 	getBPInstance().ConfirmAskForLearn()
 
 	lPLGHead(l.conf.groupIdx, "START")
@@ -268,7 +268,7 @@ func (l *learner) confirmAskForLearn(sendNodeID nodeId) {
 	paxosMsg := &paxospb.PaxosMsg{}
 	paxosMsg.InstanceID = l.getInstanceID()
 	paxosMsg.NodeID = l.conf.getMyNodeID()
-	paxosMsg.MsgType = msgType_PaxosLearner_ConfirmAskforLearn
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_ConfirmAskforLearn)
 
 	lPLGHead(l.conf.groupIdx, "END InstanceID %d MyNodeID %d", l.getInstanceID(), paxosMsg.GetNodeID())
 	l.sendPaxosMessage(sendNodeID, paxosMsg, UDP)
@@ -291,11 +291,11 @@ func (l *learner) onConfirmAskForLearn(paxosMsg *paxospb.PaxosMsg) {
 	lPLGImp(l.conf.groupIdx, "OK, success confirm")
 }
 
-func (l *learner) sendLearnValue(sendNodeID nodeId, learnInstanceID uint64, learnedBallot *ballotNumber, learnedValue []byte, checksum uint32, needAck bool) error {
+func (l *learner) sendLearnValue(sendNodeID uint64, learnInstanceID uint64, learnedBallot *ballotNumber, learnedValue []byte, checksum uint32, needAck bool) error {
 	getBPInstance().SendLearnValue()
 
 	paxosMsg := &paxospb.PaxosMsg{}
-	paxosMsg.MsgType = msgType_PaxosLearner_SendLearnValue
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_SendLearnValue)
 	paxosMsg.InstanceID = learnInstanceID
 	paxosMsg.NodeID = l.conf.getMyNodeID()
 	paxosMsg.ProposalNodeID = learnedBallot.nodeID
@@ -304,7 +304,7 @@ func (l *learner) sendLearnValue(sendNodeID nodeId, learnInstanceID uint64, lear
 	paxosMsg.LastChecksum = checksum
 
 	if needAck {
-		paxosMsg.Flag = paxosMsgFlagType_SendLearnValue_NeedAck
+		paxosMsg.Flag = uint32(paxosMsgFlagType_SendLearnValue_NeedAck)
 	}
 
 	return l.sendPaxosMessage(sendNodeID, paxosMsg, TCP)
@@ -336,17 +336,17 @@ func (l *learner) onSendLearnValue(paxosMsg *paxospb.PaxosMsg) {
 			paxosMsg.GetProposalID(), paxosMsg.GetNodeID(), len(paxosMsg.GetValue()))
 	}
 
-	if paxosMsg.GetFlag() == paxosMsgFlagType_SendLearnValue_NeedAck {
+	if paxosMsg.GetFlag() == uint32(paxosMsgFlagType_SendLearnValue_NeedAck) {
 		//every time' when receive valid need ack learn value, reset noop timeout.
-		l.resetAskForLearnNoop(getInsideOptionsInstance().getAskforLearnInterval())
+		l.resetAskForLearnNoop(int64(getInsideOptionsInstance().getAskforLearnInterval()))
 		l.sendLearnValueAck(paxosMsg.GetNodeID())
 	}
 }
 
-func (l *learner) sendLearnValueAck(sendNodeID nodeId) {
-	lPLGHead("START LastAck.Instanceid %d Now.Instanceid %d", l.lastAckInstanceID, l.getInstanceID())
+func (l *learner) sendLearnValueAck(sendNodeID uint64) {
+	lPLGHead(l.conf.groupIdx, "START LastAck.Instanceid %d Now.Instanceid %d", l.lastAckInstanceID, l.getInstanceID())
 
-	if l.getInstanceID() < l.lastAckInstanceID+getInsideOptionsInstance().getLearnerReceiverAckLead() {
+	if l.getInstanceID() < l.lastAckInstanceID+uint64(getInsideOptionsInstance().getLearnerReceiverAckLead()) {
 		lPLGImp(l.conf.groupIdx, "No need to ack")
 		return
 	}
@@ -357,7 +357,7 @@ func (l *learner) sendLearnValueAck(sendNodeID nodeId) {
 
 	paxosMsg := &paxospb.PaxosMsg{}
 	paxosMsg.InstanceID = l.getInstanceID()
-	paxosMsg.MsgType = msgType_PaxosLearner_SendLearnValue_Ack
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_SendLearnValue_Ack)
 	paxosMsg.NodeID = l.conf.getMyNodeID()
 
 	l.sendPaxosMessage(sendNodeID, paxosMsg, UDP)
@@ -379,7 +379,7 @@ func (l *learner) transmitToFollower() {
 	}
 
 	paxosMsg := &paxospb.PaxosMsg{}
-	paxosMsg.MsgType = msgType_PaxosLearner_SendLearnValue
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_SendLearnValue)
 	paxosMsg.InstanceID = l.getInstanceID()
 	paxosMsg.NodeID = l.conf.getMyNodeID()
 	paxosMsg.ProposalNodeID = l.acceptor.getAcceptorState().getAcceptedBallot().nodeID
@@ -396,7 +396,7 @@ func (l *learner) proposerSendSuccess(learnInstanceID uint64, proposalID uint64)
 	getBPInstance().ProposerSendSuccess()
 
 	paxosMsg := &paxospb.PaxosMsg{}
-	paxosMsg.MsgType = msgType_PaxosLearner_ProposerSendSuccess
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_ProposerSendSuccess)
 	paxosMsg.InstanceID = learnInstanceID
 	paxosMsg.NodeID = l.conf.getMyNodeID()
 	paxosMsg.ProposalID = proposalID
@@ -446,7 +446,7 @@ func (l *learner) onProposerSendSuccess(paxosMsg *paxospb.PaxosMsg) {
 	l.transmitToFollower()
 }
 
-func (l *learner) askForCheckpoint(sendNodeID nodeId) {
+func (l *learner) askForCheckpoint(sendNodeID uint64) {
 	lPLGHead(l.conf.groupIdx, "START")
 
 	if err := l.cpMgr.prepareForAskForCheckpoint(sendNodeID); err != nil {
@@ -456,7 +456,7 @@ func (l *learner) askForCheckpoint(sendNodeID nodeId) {
 	paxosMsg := &paxospb.PaxosMsg{}
 	paxosMsg.InstanceID = l.getInstanceID()
 	paxosMsg.NodeID = l.conf.getMyNodeID()
-	paxosMsg.MsgType = msgType_PaxosLearner_AskforCheckpoint
+	paxosMsg.MsgType = int32(msgType_PaxosLearner_AskforCheckpoint)
 
 	lPLGHead(l.conf.groupIdx, "END InstanceID %d MyNodeID %d", l.getInstanceID(), paxosMsg.GetNodeID())
 
@@ -474,11 +474,11 @@ func (l *learner) onAskForCheckpoint(paxosMsg *paxospb.PaxosMsg) {
 	}
 }
 
-func (l *learner) sendCheckpointBegin(sendNodeId nodeId, uuid uint64, sequence uint64, checkpointInstanceID uint64) error {
+func (l *learner) sendCheckpointBegin(sendNodeId uint64, uuid uint64, sequence uint64, checkpointInstanceID uint64) error {
 	checkpointMsg := &paxospb.CheckpointMsg{}
-	checkpointMsg.MsgType = checkpointMsgType_SendFile
+	checkpointMsg.MsgType = int32(checkpointMsgType_SendFile)
 	checkpointMsg.NodeID = l.conf.getMyNodeID()
-	checkpointMsg.Flag = checkpointSendFileFlag_BEGIN
+	checkpointMsg.Flag = int32(checkpointSendFileFlag_BEGIN)
 	checkpointMsg.UUID = uuid
 	checkpointMsg.Sequence = sequence
 	checkpointMsg.CheckpointInstanceID = checkpointInstanceID
@@ -489,11 +489,11 @@ func (l *learner) sendCheckpointBegin(sendNodeId nodeId, uuid uint64, sequence u
 	return l.sendCheckpointMessage(sendNodeId, checkpointMsg, TCP)
 }
 
-func (l *learner) sendCheckpointEnd(sendNodeId nodeId, uuid uint64, sequence uint64, checkpointInstanceID uint64) error {
+func (l *learner) sendCheckpointEnd(sendNodeId uint64, uuid uint64, sequence uint64, checkpointInstanceID uint64) error {
 	checkpointMsg := &paxospb.CheckpointMsg{}
-	checkpointMsg.MsgType = checkpointMsgType_SendFile
+	checkpointMsg.MsgType = int32(checkpointMsgType_SendFile)
 	checkpointMsg.NodeID = l.conf.getMyNodeID()
-	checkpointMsg.Flag = checkpointSendFileFlag_END
+	checkpointMsg.Flag = int32(checkpointSendFileFlag_END)
 	checkpointMsg.UUID = uuid
 	checkpointMsg.Sequence = sequence
 	checkpointMsg.CheckpointInstanceID = checkpointInstanceID
@@ -503,11 +503,11 @@ func (l *learner) sendCheckpointEnd(sendNodeId nodeId, uuid uint64, sequence uin
 	return l.sendCheckpointMessage(sendNodeId, checkpointMsg, TCP)
 }
 
-func (l *learner) sendCheckpoint(sendNodeId nodeId, uuid uint64, sequence uint64, checkpointInstanceID uint64, checksum uint32, filepath string, smID uint64, offset uint64, buf []byte) error {
+func (l *learner) sendCheckpoint(sendNodeId uint64, uuid uint64, sequence uint64, checkpointInstanceID uint64, checksum uint32, filepath string, smID int64, offset uint64, buf []byte) error {
 	checkpointMsg := &paxospb.CheckpointMsg{}
-	checkpointMsg.MsgType = checkpointMsgType_SendFile
+	checkpointMsg.MsgType = int32(checkpointMsgType_SendFile)
 	checkpointMsg.NodeID = l.conf.getMyNodeID()
-	checkpointMsg.Flag = checkpointSendFileFlag_ING
+	checkpointMsg.Flag = int32(checkpointSendFileFlag_ING)
 	checkpointMsg.UUID = uuid
 	checkpointMsg.Sequence = sequence
 	checkpointMsg.CheckpointInstanceID = checkpointInstanceID
@@ -594,7 +594,7 @@ func (l *learner) onSendCheckpoint(checkpointMsg *paxospb.CheckpointMsg) {
 		checkpointMsg.GetOffset(), len(checkpointMsg.GetBuffer()), checkpointMsg.GetFilePath())
 
 	var err error
-	switch checkpointMsg.GetFlag() {
+	switch checkpointSendFileFlag(checkpointMsg.GetFlag()) {
 	case checkpointSendFileFlag_BEGIN:
 		err = l.onSendCheckpointBegin(checkpointMsg)
 	case checkpointSendFileFlag_ING:
@@ -609,17 +609,17 @@ func (l *learner) onSendCheckpoint(checkpointMsg *paxospb.CheckpointMsg) {
 		lPLGErr(l.conf.groupIdx, "[FAIL] reset checkpoint receiver and reset askforlearn")
 
 		l.cpReceiver.reset()
-		l.resetAskForLearnNoop(time.Millisecond * 5000)
-		l.sendCheckpointAck(checkpointMsg.GetNodeID(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence(), checkpointSendFileAckFlag_Fail)
+		l.resetAskForLearnNoop(int64(time.Millisecond) * 5000)
+		l.sendCheckpointAck(checkpointMsg.GetNodeID(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence(), int32(checkpointSendFileAckFlag_Fail))
 	} else {
-		l.sendCheckpointAck(checkpointMsg.GetNodeID(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence(), checkpointSendFileAckFlag_OK)
-		l.resetAskForLearnNoop(time.Millisecond * 120000)
+		l.sendCheckpointAck(checkpointMsg.GetNodeID(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence(), int32(checkpointSendFileAckFlag_OK))
+		l.resetAskForLearnNoop(int64(time.Millisecond) * 120000)
 	}
 }
 
-func (l *learner) sendCheckpointAck(sendNodeId nodeId, uuid uint64, sequence uint64, flag int) error {
+func (l *learner) sendCheckpointAck(sendNodeId uint64, uuid uint64, sequence uint64, flag int32) error {
 	checkpointMsg := &paxospb.CheckpointMsg{}
-	checkpointMsg.MsgType = checkpointMsgType_SendFile_Ack
+	checkpointMsg.MsgType = int32(checkpointMsgType_SendFile_Ack)
 	checkpointMsg.NodeID = l.conf.getMyNodeID()
 	checkpointMsg.UUID = uuid
 	checkpointMsg.Sequence = sequence
@@ -632,7 +632,7 @@ func (l *learner) onSendCheckpointAck(checkpointMsg *paxospb.CheckpointMsg) {
 	lPLGHead(l.conf.groupIdx, "START flag %d", checkpointMsg.GetFlag())
 
 	if l.cpSender != nil && !l.cpSender.hasBeenEnded() {
-		if checkpointMsg.GetFlag() == checkpointSendFileAckFlag_OK {
+		if checkpointMsg.GetFlag() == int32(checkpointSendFileAckFlag_OK) {
 			l.cpSender.ack(checkpointMsg.GetNodeID(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence())
 		} else {
 			l.cpSender.end()
@@ -640,7 +640,7 @@ func (l *learner) onSendCheckpointAck(checkpointMsg *paxospb.CheckpointMsg) {
 	}
 }
 
-func (l *learner) getNewCheckpointSender(sendNodeID nodeId) *checkpointSender {
+func (l *learner) getNewCheckpointSender(sendNodeID uint64) *checkpointSender {
 	if l.cpSender != nil {
 		if l.cpSender.hasBeenEnded() {
 			l.cpSender = nil

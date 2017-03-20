@@ -103,7 +103,7 @@ func (c *cleaner) run() {
 				deleteCount++
 				if deleteCount >= deleteInterval {
 					deleteCount = 0
-					time.Sleep(time.Millisecond * sleepMs)
+					time.Sleep(time.Millisecond * time.Duration(sleepMs))
 				}
 			} else {
 				lPLGDebug(c.conf.groupIdx, "delete system fail, instanceid %d", instanceID)
@@ -119,7 +119,7 @@ func (c *cleaner) run() {
 				instanceID, cpInstanceID, c.cpMgr.getMaxChosenInstanceID())
 		}
 
-		time.Sleep(time.Millisecond * (rand.Uint32()%500 + 500))
+		time.Sleep(time.Millisecond * time.Duration(rand.Uint32()%500+500))
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/buptmiao/gopaxos/paxospb"
+	"math"
 )
 
 type masterOperatorType uint32
@@ -16,22 +17,22 @@ const (
 // masterStateMachine implements the interface insideSM
 type masterStateMachine struct {
 	groupIdx      int
-	myNodeID      nodeId
+	myNodeID      uint64
 	mvStore       *masterVariableStore
-	masterNodeID  nodeId
+	masterNodeID  uint64
 	masterVersion uint64
-	leaseTime     int
+	leaseTime     uint32
 	absExpireTime uint64
 	mu            sync.Mutex
 }
 
-func newMasterStateMachine(ls LogStorage, id nodeId, groupIdx int) *masterStateMachine {
+func newMasterStateMachine(ls LogStorage, id uint64, groupIdx int) *masterStateMachine {
 	return &masterStateMachine{
 		mvStore:       newMasterVariableStore(ls),
 		groupIdx:      groupIdx,
 		myNodeID:      id,
 		masterNodeID:  nullNode,
-		masterVersion: uint64(-1),
+		masterVersion: math.MaxUint64,
 		leaseTime:     0,
 		absExpireTime: 0,
 	}
@@ -45,7 +46,7 @@ func (m *masterStateMachine) Execute(groupIdx int, instanceID uint64, paxosValue
 		return false
 	}
 
-	if masterOper.GetOperator() == masterOperatorType_Complete {
+	if masterOper.GetOperator() == uint32(masterOperatorType_Complete) {
 		var absMasterTimeout uint64
 		if smCtx != nil && smCtx.Ctx != nil {
 			absMasterTimeout = smCtx.Ctx.(uint64)
@@ -77,7 +78,7 @@ func (m *masterStateMachine) GetCheckpointInstanceID(groupIdx int) uint64 {
 	return m.masterVersion
 }
 
-func (m *masterStateMachine) BeforePropose(groupIdx, value []byte) []byte {
+func (m *masterStateMachine) BeforePropose(groupIdx int, value []byte) []byte {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -100,7 +101,7 @@ func (m *masterStateMachine) NeedCallBeforePropose() bool {
 }
 
 func (m *masterStateMachine) GetCheckpointState(groupIdx int) (string, []string, error) {
-	return nil, nil
+	return "", nil, nil
 }
 
 func (m *masterStateMachine) LoadCheckpointState(groupIdx int, checkpointTmpFileDirPath string, fileList []string, checkpointInstanceID uint64) error {
@@ -132,7 +133,7 @@ func (m *masterStateMachine) init() error {
 			m.absExpireTime = 0
 		} else {
 			m.masterNodeID = value.GetMasterNodeid()
-			m.absExpireTime = getSteadyClockMS() + value.GetLeaseTime()
+			m.absExpireTime = getSteadyClockMS() + uint64(value.GetLeaseTime())
 		}
 	}
 
@@ -169,7 +170,7 @@ func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.
 		return nil
 	}
 
-	if err := m.updateMasterToStore(masterOper.GetNodeid(), instanceID, masterOper.GetTimeout()); err != nil {
+	if err := m.updateMasterToStore(masterOper.GetNodeid(), instanceID, uint32(masterOper.GetTimeout())); err != nil {
 		lPLGErr(m.groupIdx, "UpdateMasterToStore fail, err %v", err)
 		return err
 	}
@@ -184,13 +185,13 @@ func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.
 	} else {
 		//other be master
 		//use new start timeout
-		m.absExpireTime = getSteadyClockMS() + masterOper.GetTimeout()
+		m.absExpireTime = getSteadyClockMS() + uint64(masterOper.GetTimeout())
 
 		getBPInstance().OtherBeMaster()
 		lPLGHead(m.groupIdx, "Ohter be master, absexpiretime %d", m.absExpireTime)
 	}
 
-	m.leaseTime = masterOper.GetTimeout()
+	m.leaseTime = uint32(masterOper.GetTimeout())
 	m.masterVersion = instanceID
 
 	lPLGImp(m.groupIdx, "OK, masternodeid %d version %d abstimeout %d",
@@ -199,7 +200,7 @@ func (m *masterStateMachine) learnMaster(instanceID uint64, masterOper *paxospb.
 	return nil
 }
 
-func (m *masterStateMachine) getMaster() nodeId {
+func (m *masterStateMachine) getMaster() uint64 {
 	if getSteadyClockMS() >= m.absExpireTime {
 		return nullNode
 	}
@@ -207,7 +208,7 @@ func (m *masterStateMachine) getMaster() nodeId {
 	return m.masterNodeID
 }
 
-func (m *masterStateMachine) getMasterWithVersion() (nodeId, uint64) {
+func (m *masterStateMachine) getMasterWithVersion() (uint64, uint64) {
 	return m.safeGetMaster()
 }
 
@@ -215,7 +216,7 @@ func (m *masterStateMachine) isIMMaster() bool {
 	return m.getMaster() == m.myNodeID
 }
 
-func (m *masterStateMachine) updateMasterToStore(masterNodeID nodeId, version uint64, leaseTime uint32) error {
+func (m *masterStateMachine) updateMasterToStore(masterNodeID uint64, version uint64, leaseTime uint32) error {
 	value := &paxospb.MasterVariables{}
 	value.MasterNodeid = masterNodeID
 	value.Version = version
@@ -226,7 +227,7 @@ func (m *masterStateMachine) updateMasterToStore(masterNodeID nodeId, version ui
 	return m.mvStore.write(wo, m.groupIdx, value)
 }
 
-func (m *masterStateMachine) safeGetMaster() (nodeId, uint64) {
+func (m *masterStateMachine) safeGetMaster() (uint64, uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -241,7 +242,7 @@ func (m *masterStateMachine) GetCheckpointBuffer() ([]byte, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.masterVersion == uint64(-1) {
+	if m.masterVersion == math.MaxUint64 {
 		return nil, nil
 	}
 
@@ -275,7 +276,7 @@ func (m *masterStateMachine) UpdateByCheckpoint(buf []byte) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if mVar.GetVersion() <= m.masterVersion && m.masterVersion != uint64(-1) {
+	if mVar.GetVersion() <= m.masterVersion && m.masterVersion != math.MaxUint64 {
 		lPLGImp(m.groupIdx, "lag checkpoint, no need update, cp.version %d now.version %d",
 			mVar.GetVersion(), m.masterVersion)
 		return false, nil
@@ -296,7 +297,7 @@ func (m *masterStateMachine) UpdateByCheckpoint(buf []byte) (bool, error) {
 		m.absExpireTime = 0
 	} else {
 		m.masterNodeID = mVar.GetMasterNodeid()
-		m.absExpireTime = getSteadyClockMS() + mVar.GetLeaseTime()
+		m.absExpireTime = getSteadyClockMS() + uint64(mVar.GetLeaseTime())
 	}
 
 	return false, nil

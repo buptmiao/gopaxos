@@ -75,7 +75,7 @@ func (m *masterMgr) run() {
 		m.tryBeMaster(leaseTime)
 
 		continueLeaseTimeout := (leaseTime - 100) / 4
-		continueLeaseTimeout = continueLeaseTimeout/2 + rand.Uint32()%continueLeaseTimeout
+		continueLeaseTimeout = continueLeaseTimeout/2 + int(rand.Uint32())%continueLeaseTimeout
 
 		if m.needDropMaster {
 			getBPInstance().DropMaster()
@@ -90,12 +90,12 @@ func (m *masterMgr) run() {
 			runTime = endTime - beginTime
 		}
 
-		if continueLeaseTimeout > runTime {
-			needSleepTime = continueLeaseTimeout - runTime
+		if uint64(continueLeaseTimeout) > runTime {
+			needSleepTime = uint64(continueLeaseTimeout) - runTime
 		}
 
 		lPLGImp(m.groupIdx, "TryBeMaster, sleep time %dms", needSleepTime)
-		time.Sleep(needSleepTime * time.Millisecond)
+		time.Sleep(time.Millisecond * time.Duration(needSleepTime))
 	}
 }
 
@@ -120,7 +120,7 @@ func (m *masterMgr) tryBeMaster(leaseTime int) {
 
 	masterLeaseTimeout := leaseTime - 100
 
-	absMasterTimeout := getSteadyClockMS() + masterLeaseTimeout
+	absMasterTimeout := getSteadyClockMS() + uint64(masterLeaseTimeout)
 
 	ctx := &SMCtx{
 		SMID: master_V_SMID,

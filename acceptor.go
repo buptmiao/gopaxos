@@ -65,7 +65,7 @@ func (a *acceptor) onPrepare(paxosMsg *paxospb.PaxosMsg) error {
 	replyPaxosMsg.InstanceID = a.getInstanceID()
 	replyPaxosMsg.NodeID = a.conf.getMyNodeID()
 	replyPaxosMsg.ProposalID = paxosMsg.GetProposalID()
-	replyPaxosMsg.MsgType = msgType_PaxosPrepareReply
+	replyPaxosMsg.MsgType = int32(msgType_PaxosPrepareReply)
 
 	ballot := newBallotNumber(paxosMsg.GetProposalID(), paxosMsg.GetNodeID())
 
@@ -124,7 +124,7 @@ func (a *acceptor) onAccept(paxosMsg *paxospb.PaxosMsg) {
 	replyPaxosMsg.InstanceID = a.getInstanceID()
 	replyPaxosMsg.NodeID = a.conf.getMyNodeID()
 	replyPaxosMsg.ProposalID = paxosMsg.GetProposalID()
-	replyPaxosMsg.MsgType = msgType_PaxosAcceptReply
+	replyPaxosMsg.MsgType = int32(msgType_PaxosAcceptReply)
 
 	ballot := newBallotNumber(paxosMsg.GetProposalID(), paxosMsg.GetNodeID())
 	if ballot.gte(a.state.getPromiseBallot()) {
@@ -186,6 +186,8 @@ func newAcceptorState(conf *config, ls LogStorage) *acceptorState {
 	ret.paxosLog = newPaxosLog(ls)
 	ret.syncTimes = 0
 	ret.conf = conf
+	ret.promiseBallot = newBallotNumber(0, 0)
+	ret.acceptedBallot = newBallotNumber(0, 0)
 	ret.init()
 
 	return ret

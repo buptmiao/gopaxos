@@ -5,23 +5,23 @@ type config struct {
 	syncInterval  int
 	useMembership bool
 
-	myNodeID   nodeId
+	myNodeID   uint64
 	nodeCount  int
 	groupIdx   int
 	groupCount int
 
-	nodeInfoList        *NodeInfoList
+	nodeInfoList        NodeInfoList
 	isFollower          bool
-	followToNodeID      nodeId
+	followToNodeID      uint64
 	sysVSM              *systemVSM
 	masterSM            insideSM
-	tmpNodeOnlyForLearn map[nodeId]uint64
-	myFollower          map[nodeId]uint64
+	tmpNodeOnlyForLearn map[uint64]uint64
+	myFollower          map[uint64]uint64
 }
 
 func newConfig(ls LogStorage, logSync bool, syncInterval int, useMembership bool,
 	n *NodeInfo, nodeList NodeInfoList, followerList FollowerNodeInfoList, groupIdx int,
-	groupCount int, cb MembershipChangeCallback) {
+	groupCount int, cb MembershipChangeCallback) *config {
 
 	c := &config{}
 	c.logSync = logSync
@@ -35,12 +35,12 @@ func newConfig(ls LogStorage, logSync bool, syncInterval int, useMembership bool
 	c.masterSM = nil
 
 	c.nodeInfoList = nodeList
-	c.isIMFollower = false
+	c.isFollower = false
 	c.followToNodeID = nullNode
 
 	for _, follower := range followerList {
 		if follower.MyNode.GetNodeID() == n.GetNodeID() {
-			lPLGHead("I'm follower, ip %s port %d nodeid %d",
+			lPLGHead(groupIdx, "I'm follower, ip %s port %d nodeid %d",
 				n.GetIP(), n.GetPort(), n.GetNodeID())
 			c.isFollower = true
 			c.followToNodeID = follower.FollowNode.GetNodeID()
@@ -54,7 +54,7 @@ func newConfig(ls LogStorage, logSync bool, syncInterval int, useMembership bool
 func (c *config) init() error {
 	err := c.sysVSM.init()
 	if err != nil {
-		lPLGErr("fail, ret %v", err)
+		lPLGErr(c.groupIdx, "fail, error: %v", err)
 		return err
 	}
 
@@ -66,7 +66,7 @@ func (c *config) init() error {
 
 func (c *config) checkConfig() bool {
 	if !c.sysVSM.isIMInMembership() {
-		lPLGErr("my node %d is not in membership", c.myNodeID)
+		lPLGErr(c.groupIdx, "my node %d is not in membership", c.myNodeID)
 		return false
 	}
 
@@ -77,7 +77,7 @@ func (c *config) getGid() uint64 {
 	return c.sysVSM.getGid()
 }
 
-func (c *config) getMyNodeID() nodeId {
+func (c *config) getMyNodeID() uint64 {
 	return c.myNodeID
 }
 
@@ -113,7 +113,7 @@ func (c *config) getAcceptTimeoutMs() int {
 	return 3000
 }
 
-func (c *config) isValidNodeID(id nodeId) bool {
+func (c *config) isValidNodeID(id uint64) bool {
 	return c.sysVSM.isValidNodeID(id)
 }
 
@@ -121,7 +121,7 @@ func (c *config) isIMFollower() bool {
 	return c.isFollower
 }
 
-func (c *config) getFollowToNodeID() nodeId {
+func (c *config) getFollowToNodeID() uint64 {
 	return c.followToNodeID
 }
 
@@ -137,7 +137,7 @@ func (c *config) getMasterSM() insideSM {
 	return c.masterSM
 }
 
-func (c *config) addTmpNodeOnlyForLearn(id nodeId) {
+func (c *config) addTmpNodeOnlyForLearn(id uint64) {
 	nodeIDSet := c.sysVSM.getMembershipMap()
 	_, ok := nodeIDSet[id]
 	if ok {
@@ -147,10 +147,10 @@ func (c *config) addTmpNodeOnlyForLearn(id nodeId) {
 	c.tmpNodeOnlyForLearn[id] = getSteadyClockMS() + 60000
 }
 
-func (c *config) getTmpNodeMap() map[nodeId]uint64 {
+func (c *config) getTmpNodeMap() map[uint64]uint64 {
 	now := getSteadyClockMS()
 
-	tmp := make(map[nodeId]uint64)
+	tmp := make(map[uint64]uint64)
 	for k, v := range c.tmpNodeOnlyForLearn {
 		if v < now {
 			lPLErr("tmpnode %d timeout, nowtimems %d tmpnode last add time %d",
@@ -165,14 +165,14 @@ func (c *config) getTmpNodeMap() map[nodeId]uint64 {
 	return tmp
 }
 
-func (c *config) addFollowerNode(myFollowerNodeID nodeId) {
-	c.myFollower[myFollowerNodeID] = getSteadyClockMS() + getInsideOptionsInstance().getAskforLearnInterval()*3
+func (c *config) addFollowerNode(myFollowerNodeID uint64) {
+	c.myFollower[myFollowerNodeID] = getSteadyClockMS() + uint64(getInsideOptionsInstance().getAskforLearnInterval()*3)
 }
 
-func (c *config) getMyFollowerMap() map[nodeId]uint64 {
+func (c *config) getMyFollowerMap() map[uint64]uint64 {
 	now := getSteadyClockMS()
 
-	tmp := make(map[nodeId]uint64)
+	tmp := make(map[uint64]uint64)
 	for k, v := range c.myFollower {
 		if v < now {
 			lPLErr("follower %d timeout, nowtimems %d tmpnode last add time %d",

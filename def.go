@@ -1,12 +1,11 @@
 package gopaxos
 
 import (
-	"github.com/pkg/errors"
 	"unsafe"
 )
 
 const (
-	system_V_SMID int = 100000000 + iota
+	system_V_SMID int64 = 100000000 + iota
 	master_V_SMID
 	batch_Propose_SMID
 )

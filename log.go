@@ -16,7 +16,7 @@ const (
 	LogLevel_Verbose
 )
 
-type LogFunc func(format string, args ...interface{})
+type LogFunc func(level LogLevel, format string, args ...interface{})
 
 var oneLogger sync.Once
 var staticLogger *logger
@@ -42,7 +42,7 @@ func (l *logger) SetLogFunc(logFunc LogFunc) {
 }
 
 func (l *logger) LogError(format string, args ...interface{}) {
-	newFormat := "\033[41;37m " + format + " \033[0m"
+	newFormat := "\033[41;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
 		l.logFunc(LogLevel_Error, newFormat, args...)
 		return
@@ -55,18 +55,19 @@ func (l *logger) LogError(format string, args ...interface{}) {
 }
 
 func (l *logger) LogStatus(format string, args ...interface{}) {
+	newFormat := format + "\n"
 	if l.logFunc != nil {
-		l.logFunc(LogLevel_Error, format, args...)
+		l.logFunc(LogLevel_Error, newFormat, args...)
 		return
 	}
 	if l.logLevel < LogLevel_Error {
 		return
 	}
-	fmt.Printf(format, args...)
+	fmt.Printf(newFormat, args...)
 }
 
 func (l *logger) LogWarning(format string, args ...interface{}) {
-	newFormat := "\033[44;37m " + format + " \033[0m"
+	newFormat := "\033[44;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
 		l.logFunc(LogLevel_Warning, newFormat, args...)
 		return
@@ -79,7 +80,7 @@ func (l *logger) LogWarning(format string, args ...interface{}) {
 }
 
 func (l *logger) LogInfo(format string, args ...interface{}) {
-	newFormat := "\033[45;37m " + format + " \033[0m"
+	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
 		l.logFunc(LogLevel_Info, newFormat, args...)
 		return
@@ -92,7 +93,7 @@ func (l *logger) LogInfo(format string, args ...interface{}) {
 }
 
 func (l *logger) LogVerbose(format string, args ...interface{}) {
-	newFormat := "\033[45;37m " + format + " \033[0m"
+	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
 		l.logFunc(LogLevel_Verbose, newFormat, args...)
 		return
@@ -105,7 +106,7 @@ func (l *logger) LogVerbose(format string, args ...interface{}) {
 }
 
 func formatHeader() string {
-	_, file, line, _ := runtime.Caller(3)
+	_, file, line, _ := runtime.Caller(2)
 	short := file
 	for i := len(file) - 1; i > 0; i-- {
 		if file[i] == '/' {
@@ -118,45 +119,45 @@ func formatHeader() string {
 }
 
 func lNLDebug(format string, args ...interface{}) {
-	getLoggerInstance().LogVerbose("DEBUG: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogVerbose(fmt.Sprintf("DEBUG: %s ", formatHeader())+format, args...)
 }
 
 func lNLErr(format string, args ...interface{}) {
-	getLoggerInstance().LogError("ERR: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogError(fmt.Sprintf("ERR: %s ", formatHeader())+format, args...)
 }
 
 func lPLErr(format string, args ...interface{}) {
-	getLoggerInstance().LogError("ERR: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogError(fmt.Sprintf("ERR: %s ", formatHeader())+format, args...)
 }
 
 func lPLImp(format string, args ...interface{}) {
-	getLoggerInstance().LogInfo("Showy: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogInfo(fmt.Sprintf("Showy: %s ", formatHeader())+format, args...)
 }
 
 func lPLHead(format string, args ...interface{}) {
-	getLoggerInstance().LogWarning("Imp: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogWarning(fmt.Sprintf("Imp: %s ", formatHeader())+format, args...)
 }
 
 func lPLDebug(format string, args ...interface{}) {
-	getLoggerInstance().LogVerbose("DEBUG: %s "+format, formatHeader(), args...)
+	getLoggerInstance().LogVerbose(fmt.Sprintf("DEBUG: %s ", formatHeader())+format, args...)
 }
 
 func lPLGErr(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogError("ERR(%d): %s "+format, groupIdx, formatHeader(), args...)
+	getLoggerInstance().LogError(fmt.Sprintf("ERR(%d): %s ", groupIdx, formatHeader())+format, args...)
 }
 
 func lPLGStatus(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogStatus("STATUS(%d): %s "+format, groupIdx, formatHeader(), args...)
+	getLoggerInstance().LogStatus(fmt.Sprintf("STATUS(%d): %s ", groupIdx, formatHeader())+format, args...)
 }
 
 func lPLGImp(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogInfo("Showy(%d): %s "+format, groupIdx, formatHeader(), args...)
+	getLoggerInstance().LogInfo(fmt.Sprintf("Showy(%d): %s ", groupIdx, formatHeader())+format, args...)
 }
 
 func lPLGHead(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogWarning("Imp(%d): %s "+format, groupIdx, formatHeader(), args...)
+	getLoggerInstance().LogWarning(fmt.Sprintf("Imp(%d): %s ", groupIdx, formatHeader())+format, args...)
 }
 
 func lPLGDebug(groupIdx int, format string, args ...interface{}) {
-	getLoggerInstance().LogVerbose("DEBUG(%d): %s "+format, groupIdx, formatHeader(), args...)
+	getLoggerInstance().LogVerbose(fmt.Sprintf("DEBUG(%d): %s ", groupIdx, formatHeader())+format, args...)
 }

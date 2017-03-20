@@ -89,7 +89,7 @@ func (r *rePlayer) playOne(instanceID uint64) bool {
 	}
 
 	if !r.smFac.executeForCheckpoint(r.conf.groupIdx, instanceID, state.GetAcceptedValue()) {
-		lPLGErr("Checkpoint sm excute fail, instanceid %d", instanceID)
+		lPLGErr(r.conf.groupIdx, "Checkpoint sm excute fail, instanceid %d", instanceID)
 		return false
 	}
 

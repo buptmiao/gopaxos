@@ -14,20 +14,20 @@ import (
 )
 
 type notifier struct {
-	pipe chan int
+	pipe chan error
 }
 
 func newNotifier() *notifier {
 	return &notifier{
-		pipe: make(chan int, 10),
+		pipe: make(chan error, 10),
 	}
 }
 
-func (n *notifier) SendNotify(v int) {
+func (n *notifier) SendNotify(v error) {
 	n.pipe <- v
 }
 
-func (n *notifier) WaitNotify() int {
+func (n *notifier) WaitNotify() error {
 	return <-n.pipe
 }
 
@@ -103,10 +103,10 @@ type timeStat uint64
 func (t timeStat) point() int {
 	now := getSteadyClockMS()
 	var passTime int
-	if now > t {
-		passTime = now - t
+	if now > uint64(t) {
+		passTime = int(now - uint64(t))
 	}
-	t = now
+	t = timeStat(now)
 	return passTime
 }
 
@@ -115,14 +115,16 @@ func (t timeStat) point() int {
 //
 ///////////////////////////////////////////////////////////////////////////////
 type serialLock struct {
-	mu   sync.Mutex
-	cond *sync.Cond
+	mu     sync.Mutex
+	muCond sync.Mutex
+	cond   *sync.Cond
 }
 
 func newSerialLock() *serialLock {
 	return &serialLock{
-		mu:   sync.Mutex{},
-		cond: sync.NewCond(sync.Mutex{}),
+		mu:     sync.Mutex{},
+		muCond: sync.Mutex{},
+		cond:   sync.NewCond(&sync.Mutex{}),
 	}
 }
 
@@ -135,7 +137,9 @@ func (s *serialLock) unlock() {
 }
 
 func (s *serialLock) wait() {
+	s.cond.L.Lock()
 	s.cond.Wait()
+	s.cond.L.Unlock()
 }
 
 func (s *serialLock) interrupt() {
@@ -150,7 +154,9 @@ func (s *serialLock) broadcast() {
 func (s *serialLock) waitTime(timeout time.Duration) bool {
 	done := make(chan struct{})
 	go func() {
+		s.cond.L.Lock()
 		s.cond.Wait()
+		s.cond.L.Unlock()
 		close(done)
 	}()
 	select {
@@ -190,6 +196,7 @@ func newWaitLock() *waitLock {
 		lockUseTimeCount:        0,
 		rejectRate:              0,
 		lockWaitTimeThresholdMs: -1,
+		slock: newSerialLock(),
 	}
 }
 
@@ -203,7 +210,7 @@ func (w *waitLock) canLock() bool {
 		return true
 	}
 
-	return (rand.Uint32() % 100) >= w.rejectRate
+	return int(rand.Uint32()%100) >= w.rejectRate
 }
 
 func (w *waitLock) refreshRejectRate(useTimeMs int) {
@@ -253,7 +260,7 @@ func (w *waitLock) lock(timeoutMs int) (int, bool) {
 			continue
 		}
 
-		if !w.slock.waitTime(time.Millisecond * timeoutMs) {
+		if !w.slock.waitTime(time.Millisecond * time.Duration(timeoutMs)) {
 			//lock timeout
 			getLock = false
 			break
@@ -263,9 +270,9 @@ func (w *waitLock) lock(timeoutMs int) (int, bool) {
 	w.waitLockCount--
 
 	endTime := getSteadyClockMS()
-	useTimeMs := 0
+	var useTimeMs int
 	if endTime > beginTime {
-		useTimeMs = endTime - beginTime
+		useTimeMs = int(endTime - beginTime)
 	}
 
 	w.refreshRejectRate(useTimeMs)
@@ -293,7 +300,7 @@ func (w *waitLock) getNowAvgThreadWaitTime() int {
 	return w.avgLockUseTime
 }
 
-func (w *waitLock) getNowRejectRate() {
+func (w *waitLock) getNowRejectRate() int {
 	return w.rejectRate
 }
 
@@ -389,7 +396,7 @@ func (t *timer) getNextTimeout() int {
 	obj := t.timerHeap[0]
 	now := getSteadyClockMS()
 	if obj.absTime > now {
-		nextTimeout = obj.absTime - now
+		nextTimeout = int(obj.absTime - now)
 	}
 
 	return nextTimeout
@@ -399,20 +406,20 @@ func (t *timer) getNextTimeout() int {
 // others
 //
 ///////////////////////////////////////////////////////////////////////////////
-func makeOpValue(id nodeId, version uint64, timeout int, op masterOperatorType) ([]byte, error) {
+func makeOpValue(id uint64, version uint64, timeout int, op masterOperatorType) ([]byte, error) {
 	oper := &paxospb.MasterOperator{}
 
 	oper.Nodeid = id
 	oper.Version = version
-	oper.Timeout = timeout
-	oper.Operator = op
+	oper.Timeout = int32(timeout)
+	oper.Operator = uint32(op)
 	oper.Sid = rand.Uint32()
 
 	return oper.Marshal()
 }
 
 func getGid(id uint64) uint64 {
-	return (id ^ rand.Uint32()) + rand.Uint32()
+	return (id ^ uint64(rand.Uint32())) + uint64(rand.Uint32())
 }
 
 func crc(crc uint32, data []byte) uint32 {

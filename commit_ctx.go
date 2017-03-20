@@ -2,13 +2,14 @@ package gopaxos
 
 import (
 	"bytes"
+	"math"
 	"time"
 )
 
 type commitCtx struct {
 	conf        *config
 	instanceID  uint64
-	commitRet   int
+	commitRet   int32
 	isCommitEnd bool
 	timeoutMs   int
 	value       []byte
@@ -18,6 +19,8 @@ type commitCtx struct {
 
 func newCommitCtx(conf *config) *commitCtx {
 	ret := &commitCtx{}
+	ret.conf = conf
+	ret.slock = newSerialLock()
 	ret.newCommit(nil, nil, 0)
 	return ret
 }
@@ -26,7 +29,7 @@ func (c *commitCtx) newCommit(value []byte, ctx *SMCtx, timeoutMs int) {
 	c.slock.lock()
 	defer c.slock.unlock()
 
-	c.instanceID = uint64(-1)
+	c.instanceID = math.MaxUint64
 	c.commitRet = -1
 	c.isCommitEnd = false
 	c.timeoutMs = timeoutMs
@@ -40,7 +43,7 @@ func (c *commitCtx) newCommit(value []byte, ctx *SMCtx, timeoutMs int) {
 }
 
 func (c *commitCtx) isNewCommit() bool {
-	return c.instanceID == uint64(-1) && c.value != nil
+	return c.instanceID == math.MaxUint64 && c.value != nil
 }
 
 func (c *commitCtx) getCommitValue() []byte {
@@ -71,11 +74,11 @@ func (c *commitCtx) isMyCommit(instanceID uint64, learnValue []byte) (*SMCtx, bo
 	return nil, isMyCommit
 }
 
-func (c *commitCtx) setResultOnlyRet(commitRet int) {
-	c.setResult(commitRet, uint64(-1), nil)
+func (c *commitCtx) setResultOnlyRet(commitRet int32) {
+	c.setResult(commitRet, math.MaxUint64, nil)
 }
 
-func (c *commitCtx) setResult(commitRet int, instanceID uint64, learnValue []byte) {
+func (c *commitCtx) setResult(commitRet int32, instanceID uint64, learnValue []byte) {
 	c.slock.lock()
 	defer c.slock.unlock()
 
@@ -86,7 +89,7 @@ func (c *commitCtx) setResult(commitRet int, instanceID uint64, learnValue []byt
 	c.commitRet = commitRet
 	if c.commitRet == 0 {
 		if !bytes.Equal(learnValue, c.value) {
-			c.commitRet = paxosTryCommitRet_Conflict
+			c.commitRet = int32(paxosTryCommitRet_Conflict)
 		}
 	}
 
@@ -95,7 +98,7 @@ func (c *commitCtx) setResult(commitRet int, instanceID uint64, learnValue []byt
 	c.slock.interrupt()
 }
 
-func (c *commitCtx) getResult() (uint64, int) {
+func (c *commitCtx) getResult() (uint64, int32) {
 	c.slock.lock()
 	defer c.slock.unlock()
 

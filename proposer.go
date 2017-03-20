@@ -2,8 +2,6 @@ package gopaxos
 
 import (
 	"github.com/buptmiao/gopaxos/paxospb"
-	"golang.org/x/tools/go/gcimporter15/testdata"
-	"math"
 	"math/rand"
 )
 
@@ -107,11 +105,11 @@ func (p *proposer) addPrepareTimer(timeoutMs int) {
 	}
 
 	if timeoutMs > 0 {
-		p.loop.addTimer(timeoutMs, timer_Proposer_Prepare_Timeout, p.prepareTimerID)
+		p.prepareTimerID, _ = p.loop.addTimer(timeoutMs, timer_Proposer_Prepare_Timeout)
 		return
 	}
 
-	p.loop.addTimer(p.lastPrepareTimeoutMs, timer_Proposer_Prepare_Timeout, p.prepareTimerID)
+	p.prepareTimerID, _ = p.loop.addTimer(p.lastPrepareTimeoutMs, timer_Proposer_Prepare_Timeout)
 
 	p.timeoutInstanceID = p.getInstanceID()
 
@@ -130,11 +128,11 @@ func (p *proposer) addAcceptTimer(timeoutMs int) {
 	}
 
 	if timeoutMs > 0 {
-		p.loop.addTimer(timeoutMs, timer_Proposer_Accept_Timeout, p.acceptTimerID)
+		p.acceptTimerID, _ = p.loop.addTimer(timeoutMs, timer_Proposer_Accept_Timeout)
 		return
 	}
 
-	p.loop.addTimer(p.lastAcceptTimeoutMs, timer_Proposer_Accept_Timeout, p.acceptTimerID)
+	p.acceptTimerID, _ = p.loop.addTimer(p.lastAcceptTimeoutMs, timer_Proposer_Accept_Timeout)
 
 	p.timeoutInstanceID = p.getInstanceID()
 
@@ -165,7 +163,7 @@ func (p *proposer) prepare(needNewBallot bool) {
 	}
 
 	paxosMsg := &paxospb.PaxosMsg{}
-	paxosMsg.MsgType = msgType_PaxosPrepare
+	paxosMsg.MsgType = int32(msgType_PaxosPrepare)
 	paxosMsg.InstanceID = p.getInstanceID()
 	paxosMsg.NodeID = p.conf.getMyNodeID()
 	paxosMsg.ProposalID = p.state.getProposalID()
@@ -224,7 +222,7 @@ func (p *proposer) onPrepareReply(paxosMsg *paxospb.PaxosMsg) {
 	} else if p.msgCounter.isRejectedOnThisRound() || p.msgCounter.isAllReceiveOnThisRound() {
 		getBPInstance().PrepareNotPass()
 		lPLGImp(p.conf.groupIdx, "[Not Pass] wait 30ms and restart prepare")
-		p.addPrepareTimer(rand.Uint32()%30 + 10)
+		p.addPrepareTimer(int(rand.Uint32()%30 + 10))
 	}
 
 	lPLGHead(p.conf.groupIdx, "END")
@@ -249,7 +247,7 @@ func (p *proposer) accept() {
 	p.isAccepting = true
 
 	paxosMsg := &paxospb.PaxosMsg{}
-	paxosMsg.MsgType = msgType_PaxosAccept
+	paxosMsg.MsgType = int32(msgType_PaxosAccept)
 	paxosMsg.InstanceID = p.getInstanceID()
 	paxosMsg.NodeID = p.conf.getMyNodeID()
 	paxosMsg.ProposalID = p.state.getProposalID()
@@ -305,7 +303,7 @@ func (p *proposer) onAcceptReply(paxosMsg *paxospb.PaxosMsg) {
 		getBPInstance().AcceptNotPass()
 
 		lPLGImp(p.conf.groupIdx, "[Not pass] wait 30ms and Restart prepare")
-		p.addAcceptTimer(rand.Uint32()%30 + 10)
+		p.addAcceptTimer(int(rand.Uint32()%30 + 10))
 	}
 
 	lPLGHead(p.conf.groupIdx, "END")
@@ -412,7 +410,7 @@ func (p *proposerState) addPreAcceptValue(otherPreAcceptBallot *ballotNumber, ot
 	}
 }
 
-func (p *proposerState) getProposalID() {
+func (p *proposerState) getProposalID() uint64 {
 	return p.proposalID
 }
 

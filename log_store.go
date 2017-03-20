@@ -15,6 +15,10 @@ type logStoreLogger struct {
 	f *os.File
 }
 
+func newLogStoreLogger() *logStoreLogger {
+	return &logStoreLogger{}
+}
+
 func (l *logStoreLogger) init(path string) {
 	fpath := path + "/LOG"
 	l.f, _ = os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
@@ -67,22 +71,23 @@ func newLogStore() *logStore {
 		groupIdx:         -1,
 		nowFileSize:      -1,
 		nowFileOffset:    0,
+		fileLogger:       newLogStoreLogger(),
 	}
 }
 
-func (l *logStore) init(dbPath string, groupIdx, d *db) error {
+func (l *logStore) init(dbPath string, groupIdx int, d *db) error {
 	l.groupIdx = groupIdx
-	path := dbPath + "/" + "vfile"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err = os.Mkdir(path, 0775); err != nil {
-			lPLGErr(l.groupIdx, "Create dir fail, path %s", path)
+	l.path = dbPath + "/" + "vfile"
+	if _, err := os.Stat(l.path); os.IsNotExist(err) {
+		if err = os.Mkdir(l.path, 0775); err != nil {
+			lPLGErr(l.groupIdx, "Create dir fail, path %s", l.path)
 			return err
 		}
 	}
 
-	l.fileLogger.init(path)
+	l.fileLogger.init(l.path)
 
-	metaPath := path + "/meta"
+	metaPath := l.path + "/meta"
 
 	var err error
 	l.metaFd, err = os.OpenFile(metaPath, os.O_RDWR|os.O_CREATE, 0600)
@@ -148,8 +153,8 @@ func (l *logStore) init(dbPath string, groupIdx, d *db) error {
 	l.fileLogger.log("init write fileid %d now_w_offset %d filesize %d",
 		l.fileID, l.nowFileOffset, l.nowFileSize)
 
-	lPLGHead(l.groupIdx, "ok, path %s fileid %d meta checksum %u nowfilesize %d nowfilewriteoffset %d",
-		path, l.fileID, metaChecksum, l.nowFileSize, l.nowFileOffset)
+	lPLGHead(l.groupIdx, "ok, path %s fileid %d meta checksum %d nowfilesize %d nowfilewriteoffset %d",
+		l.path, l.fileID, metaChecksum, l.nowFileSize, l.nowFileOffset)
 
 	return nil
 }
@@ -163,22 +168,22 @@ func (l *logStore) expandFile(fd *os.File) (int64, error) {
 
 	if fileSize == 0 {
 		// new file
-		fileSize, err = fd.Seek(getInsideOptionsInstance().getLogFileMaxSize()-1, os.SEEK_SET)
+		fileSize, err = fd.Seek(int64(getInsideOptionsInstance().getLogFileMaxSize()-1), os.SEEK_SET)
 		if err != nil {
 			return 0, err
 		}
 
-		_, err = fd.Write([1]byte{0})
+		_, err = fd.Write(make([]byte, 1))
 		if err != nil {
 			lPLGErr(l.groupIdx, "write 1 bytes fail")
 			return 0, err
 		}
 
-		fileSize = getInsideOptionsInstance().getLogFileMaxSize()
+		fileSize = int64(getInsideOptionsInstance().getLogFileMaxSize())
 		_, err = fd.Seek(0, os.SEEK_SET)
 		l.nowFileOffset = 0
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
@@ -273,10 +278,10 @@ func (l *logStore) getFileID(size int) (*os.File, int64, int64, error) {
 	offset, err := l.fd.Seek(l.nowFileOffset, os.SEEK_SET)
 	if err != nil {
 		lPLGErr(l.groupIdx, "seek file failed: %v ", err)
-		return err
+		return nil, 0, 0, err
 	}
 
-	if offset+size > l.nowFileSize {
+	if offset+int64(size) > l.nowFileSize {
 		l.fd.Close()
 		l.fd = nil
 
@@ -295,7 +300,7 @@ func (l *logStore) getFileID(size int) (*os.File, int64, int64, error) {
 		if offset != 0 {
 			if err != nil {
 				lPLGErr(l.groupIdx, "seek file failed: %v ", offset)
-				return err
+				return nil, 0, 0, err
 			}
 
 			l.fileLogger.log("new file but file aready exist, now fileid %d exist filesize %d", l.fileID, offset)
@@ -328,9 +333,9 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 
 	bufLen := uint64(len(buf) + 8)
 	tmpBufLen := bufLen + 8
-	fd, fileID, offset, err := l.getFileID(tmpBufLen)
+	fd, fileID, offset, err := l.getFileID(int(tmpBufLen))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	l.tmpAppendBuf = make([]byte, 0, tmpBufLen)
@@ -346,18 +351,18 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 		getBPInstance().AppendDataFail()
 		lPLGErr(l.groupIdx, "writelen %d not equal to %d, buffersize %u, err: %v",
 			writeLen, tmpBufLen, len(buf), err)
-		return err
+		return "", err
 	}
 
 	if wo {
 		err := fd.Sync()
 		if err != nil {
 			lPLGErr(l.groupIdx, "fdatasync fail, writelen %d errno %v", writeLen, err)
-			return err
+			return "", err
 		}
 	}
 
-	l.nowFileOffset += writeLen
+	l.nowFileOffset += int64(writeLen)
 
 	useTimeMs := l.timeStat.point()
 
@@ -396,18 +401,18 @@ func (l *logStore) isValidFileID(sFileID string) bool {
 	return true
 }
 
-func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
+func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 	fileID, offset, checksum := l.parseFileID(sFileID)
 	fd, err := l.openFile(fileID)
 	if err != nil {
 		lPLGErr(l.groupIdx, "open file failed: %v ", err)
-		return 0, err
+		return nil, 0, err
 	}
 
 	_, err = fd.Seek(offset, os.SEEK_SET)
 	if err != nil {
 		lPLGErr(l.groupIdx, "seek file failed: %v ", err)
-		return 0, err
+		return nil, 0, err
 	}
 
 	tmpBuf := make([]byte, 8)
@@ -415,7 +420,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	if err != nil {
 		fd.Close()
 		lPLGErr(l.groupIdx, "readlen %d not qual to 8, err: %v", n, err)
-		return 0, err
+		return nil, 0, err
 	}
 	bufLen := binary.LittleEndian.Uint64(tmpBuf)
 
@@ -427,7 +432,7 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	if err != nil {
 		fd.Close()
 		lPLGErr(l.groupIdx, "readlen %d not qual to %u", readLen, bufLen)
-		return 0, err
+		return nil, 0, err
 	}
 
 	fd.Close()
@@ -435,15 +440,15 @@ func (l *logStore) read(sFileID string, buf []byte) (uint64, error) {
 	if fileChecksum := crc(0, tmpBuf); fileChecksum != checksum {
 		getBPInstance().GetFileChecksumNotEqual()
 		lPLGErr(l.groupIdx, "checksum not equal, filechecksum %u checksum %u", fileChecksum, checksum)
-		return 0, errChecksumNotMatch
+		return nil, 0, errChecksumNotMatch
 	}
 
 	instanceID := binary.LittleEndian.Uint64(tmpBuf)
-	buf = tmpBuf[8:]
+	buf := tmpBuf[8:]
 	lPLGImp(l.groupIdx, "ok, fileid %d offset %d instanceid %lu buffer size %d",
 		fileID, offset, instanceID, bufLen-8)
 
-	return instanceID, nil
+	return buf, instanceID, nil
 }
 
 func (l *logStore) del(sFileID string, instanceID uint64) error {
@@ -494,7 +499,7 @@ func (l *logStore) rebuildIndex(d *db) (int64, error) {
 		return nowFileWriteOffset, errFileIDTooLarge
 	}
 
-	lPLGHead(l.groupIdx, "START fileid %d offset %d checksum %u", fileID, offset, checksum)
+	lPLGHead(l.groupIdx, "START fileid %d offset %d checksum %d", fileID, offset, checksum)
 
 	for nowFileID := fileID; ; nowFileID++ {
 		nowFileWriteOffset, err = l.rebuildIndexForOneFile(nowFileID, offset, d, &nowInstanceID)
@@ -514,7 +519,7 @@ func (l *logStore) rebuildIndex(d *db) (int64, error) {
 	return nowFileWriteOffset, nil
 }
 
-func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, nowInstanceID *int64) (int64, error) {
+func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, nowInstanceID *uint64) (int64, error) {
 	var nowFileWriteOffset int64
 	var err error
 	filepath := fmt.Sprintf("%s/%d.f", l.path, fileID)
@@ -564,7 +569,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 			break
 		}
 
-		if bufLen > fileLen || bufLen < 8 {
+		if bufLen > uint64(fileLen) || bufLen < 8 {
 			lPLGErr(l.groupIdx, "File data len wrong, data len %d filelen %d", bufLen, fileLen)
 			err = errFileSizeWrong
 			break
@@ -572,16 +577,16 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 
 		l.tmpBuf = make([]byte, bufLen)
 		readLen, _ = fd.Read(l.tmpBuf)
-		if readLen != bufLen {
+		if uint64(readLen) != bufLen {
 			needTruncate = true
 			lPLGErr(l.groupIdx, "readlen %d not qual to %d, need truncate", readLen, bufLen)
 			break
 		}
 
-		instanceID := int64(binary.LittleEndian.Uint64(l.tmpBuf[:8]))
+		instanceID := binary.LittleEndian.Uint64(l.tmpBuf[:8])
 
 		if instanceID < *nowInstanceID {
-			lPLGErr("File data wrong, read instanceid %d smaller than now instanceid %d",
+			lPLGErr(l.groupIdx, "File data wrong, read instanceid %d smaller than now instanceid %d",
 				instanceID, nowInstanceID)
 			err = errFileBroken
 			break
@@ -610,7 +615,7 @@ func (l *logStore) rebuildIndexForOneFile(fileID int64, offset int64, d *db, now
 		lPLGImp(l.groupIdx, "rebuild one index ok, fileid %d offset %d instanceid %d checksum %d buffer size %d",
 			fileID, nowOffset, instanceID, fileChecksum, bufLen-8)
 
-		nowOffset += bufLen + 8
+		nowOffset += int64(bufLen) + 8
 	}
 
 	fd.Close()

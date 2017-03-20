@@ -18,7 +18,9 @@ func newGroup(ls LogStorage, network Network, masterSM insideSM, groupIdx int, o
 
 	ret.instance = newInstance(ret.conf, ls, ret.comm, opt)
 
-	ret.initRet = -1
+	ret.initRet = nil
+
+	ret.conf.setMasterSM(masterSM)
 
 	return ret
 }
@@ -38,6 +40,7 @@ func (g *group) init() {
 	g.addStateMachine(g.conf.getMasterSM())
 
 	g.initRet = g.instance.init()
+	g.ch <- struct{}{}
 }
 
 func (g *group) getInitRet() error {

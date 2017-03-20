@@ -175,17 +175,19 @@ func getBPInstance() Breakpoint {
 	if bpInstance != nil {
 		return bpInstance
 	}
-	return &dfBreakpoint{}
+	return &dfbp
 }
 
 func setBPInstance(bp Breakpoint) {
 	bpInstance = bp
 }
 
+var dfbp dfBreakpoint
+
 type dfBreakpoint bool
 
 //ProposerBP
-func (d *dfBreakpoint) NewProposal(value string)            {}
+func (d *dfBreakpoint) NewProposal(value []byte)            {}
 func (d *dfBreakpoint) NewProposalSkipPrepare()             {}
 func (d *dfBreakpoint) Prepare()                            {}
 func (d *dfBreakpoint) OnPrepareReply()                     {}

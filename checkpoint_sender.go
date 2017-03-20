@@ -13,7 +13,7 @@ const (
 )
 
 type checkpointSender struct {
-	sendNodeID nodeId
+	sendNodeID uint64
 	conf       *config
 	learner    *learner
 	smFac      *smFac
@@ -34,14 +34,14 @@ type checkpointSender struct {
 	quit chan struct{}
 }
 
-func newCheckpointSender(sendNodeID nodeId, conf *config, l *learner, smFac *smFac, cpMgr *checkpointMgr) *checkpointSender {
+func newCheckpointSender(sendNodeID uint64, conf *config, l *learner, smFac *smFac, cpMgr *checkpointMgr) *checkpointSender {
 	ret := &checkpointSender{}
 	ret.sendNodeID = sendNodeID
 	ret.conf = conf
 	ret.learner = l
 	ret.smFac = smFac
 	ret.cpMgr = cpMgr
-	ret.uuid = (conf.getMyNodeID() ^ l.getInstanceID()) + rand.Uint32()
+	ret.uuid = (conf.getMyNodeID() ^ l.getInstanceID()) + uint64(rand.Uint32())
 	ret.tmpBuffer = make([]byte, 1048576)
 	return ret
 }
@@ -65,7 +65,7 @@ func (c *checkpointSender) end() {
 	c.isEnd = true
 }
 
-func (c *checkpointSender) hasBeenEnded() {
+func (c *checkpointSender) hasBeenEnded() bool {
 	return c.isEnded
 }
 
@@ -155,7 +155,7 @@ func (c *checkpointSender) sendCheckpoint() {
 
 	err = c.learner.sendCheckpointEnd(c.sendNodeID, c.uuid, c.sequence, c.smFac.getCheckpointInstanceID(c.conf.groupIdx))
 	if err != nil {
-		lPLGErr("SendCheckpointEnd fail, sequence %d, error: %v", c.sequence, err)
+		lPLGErr(c.conf.groupIdx, "SendCheckpointEnd fail, sequence %d, error: %v", c.sequence, err)
 	}
 
 	getBPInstance().SendCheckpointEnd()
@@ -205,7 +205,7 @@ func (c *checkpointSender) sendFile(sm StateMachine, dirPath, filePath string) e
 		return err
 	}
 	defer fd.Close()
-	var readLen, offset int64
+	var readLen, offset int
 
 	for {
 		readLen, err = fd.Read(c.tmpBuffer)
@@ -218,7 +218,7 @@ func (c *checkpointSender) sendFile(sm StateMachine, dirPath, filePath string) e
 			return err
 		}
 
-		if err = c.sendBuffer(sm.SMID(), sm.GetCheckpointInstanceID(c.conf.groupIdx), filePath, offset, c.tmpBuffer[:readLen]); err != nil {
+		if err = c.sendBuffer(sm.SMID(), sm.GetCheckpointInstanceID(c.conf.groupIdx), filePath, uint64(offset), c.tmpBuffer[:readLen]); err != nil {
 			return err
 		}
 
@@ -266,7 +266,7 @@ func (c *checkpointSender) sendBuffer(smID int64, cpInstanceID uint64, filePath 
 	return nil
 }
 
-func (c *checkpointSender) ack(sendNodeID nodeId, uuid uint64, sequence uint64) {
+func (c *checkpointSender) ack(sendNodeID uint64, uuid uint64, sequence uint64) {
 	if sendNodeID != c.sendNodeID {
 		lPLGErr(c.conf.groupIdx, "send nodeid not same, ack.sendnodeid %d self.sendnodeid %d", sendNodeID, c.sendNodeID)
 		return
@@ -290,7 +290,7 @@ func (c *checkpointSender) ack(sendNodeID nodeId, uuid uint64, sequence uint64) 
 func (c *checkpointSender) checkAck(sendSequence uint64) bool {
 	for sendSequence > c.ackSequence+checkpointAckLead {
 		now := getSteadyClockMS()
-		passTime := 0
+		var passTime uint64
 		if now > c.absLastAckTime {
 			passTime = now - c.absLastAckTime
 		}

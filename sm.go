@@ -60,7 +60,7 @@ type StateMachine interface {
 	//If request is batch, propose requests for multiple identical state machines will only call this function once.
 	//Ensure that the execute function correctly recognizes the modified request.
 	//Since this function is not always called, the execute function must handle the unmodified request correctly.
-	BeforePropose(groupIdx, value []byte) []byte
+	BeforePropose(groupIdx int, value []byte) []byte
 
 	//Because function BeforePropose much waste cpu,
 	//Only NeedCallBeforePropose return true then will call function BeforePropose.

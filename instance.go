@@ -48,17 +48,17 @@ func (i *instance) init() error {
 	//Must init acceptor first, because the max instanceid is record in acceptor state.
 	var err error
 	if err = i.acceptor.init(); err != nil {
-		lPLGErr("Acceptor.Init fail, error: %v", err)
+		lPLGErr(i.conf.groupIdx, "Acceptor.Init fail, error: %v", err)
 		return err
 	}
 
 	if err = i.checkpointMgr.init(); err != nil {
-		lPLGErr("CheckpointMgr.Init fail, error: %v", err)
+		lPLGErr(i.conf.groupIdx, "CheckpointMgr.Init fail, error: %v", err)
 		return err
 	}
 
 	cpInstanceID := i.checkpointMgr.getCheckpointInstanceID() + 1
-	lPLGImp("Acceptor.OK, Log.InstanceID %d Checkpoint.InstanceID %d",
+	lPLGImp(i.conf.groupIdx, "Acceptor.OK, Log.InstanceID %d Checkpoint.InstanceID %d",
 		i.acceptor.getInstanceID(), cpInstanceID)
 
 	nowInstanceID := cpInstanceID
@@ -67,7 +67,7 @@ func (i *instance) init() error {
 			return err
 		}
 
-		lPLGImp("PlayLog OK, begin instanceid %d end instanceid %d", nowInstanceID, i.acceptor.getInstanceID())
+		lPLGImp(i.conf.groupIdx, "PlayLog OK, begin instanceid %d end instanceid %d", nowInstanceID, i.acceptor.getInstanceID())
 
 		nowInstanceID = i.acceptor.getInstanceID()
 	} else {
@@ -94,7 +94,7 @@ func (i *instance) init() error {
 		return err
 	}
 
-	i.learner.resetAskForLearnNoop(getInsideOptionsInstance().getAskforLearnInterval())
+	i.learner.resetAskForLearnNoop(int64(getInsideOptionsInstance().getAskforLearnInterval()))
 
 	lPLGImp(i.conf.groupIdx, "OK")
 
@@ -130,19 +130,19 @@ func (i *instance) protectionLogicIsCheckpointInstanceIDCorrect(cpInstanceID, lo
 		minChosenInstanceID := i.checkpointMgr.getMinChosenInstanceID()
 		if i.checkpointMgr.getMinChosenInstanceID() != cpInstanceID {
 			if err := i.checkpointMgr.setMinChosenInstanceID(cpInstanceID); err != nil {
-				lPLGErr("SetMinChosenInstanceID fail, now minchosen %d max instanceid %d checkpoint instanceid %d",
+				lPLGErr(i.conf.groupIdx, "SetMinChosenInstanceID fail, now minchosen %d max instanceid %d checkpoint instanceid %d",
 					i.checkpointMgr.getMinChosenInstanceID(), logMaxInstanceID, cpInstanceID)
 				return false
 			}
 
-			lPLGStatus("Fix minchonse instanceid ok, old minchosen %d now minchosen %d max %d checkpoint %d",
+			lPLGStatus(i.conf.groupIdx, "Fix minchonse instanceid ok, old minchosen %d now minchosen %d max %d checkpoint %d",
 				minChosenInstanceID, i.checkpointMgr.getMinChosenInstanceID(), logMaxInstanceID, cpInstanceID)
 		}
 
 		return true
 	} else {
 		//other case.
-		lPLGErr(`checkpoint instanceid %d larger than log max instanceid %d. Please ensure that your checkpoint data is correct. If you ensure that, just delete all paxos log data and restart.`,
+		lPLGErr(i.conf.groupIdx, `checkpoint instanceid %d larger than log max instanceid %d. Please ensure that your checkpoint data is correct. If you ensure that, just delete all paxos log data and restart.`,
 			cpInstanceID, logMaxInstanceID)
 		return false
 	}
@@ -227,20 +227,20 @@ func (i *instance) checkNewValue() {
 
 	if i.conf.isIMFollower() {
 		lPLGErr(i.conf.groupIdx, "I'm follower, skip this new value")
-		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_Follower_Cannot_Commit)
+		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_Follower_Cannot_Commit))
 		return
 	}
 
 	if !i.conf.checkConfig() {
 		lPLGErr(i.conf.groupIdx, "I'm not in membership, skip this new value")
-		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_IM_Not_In_Membership)
+		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_IM_Not_In_Membership))
 		return
 	}
 
 	if len(i.commitCtx.getCommitValue()) > getInsideOptionsInstance().getMaxBufferSize() {
 		lPLGErr(i.conf.groupIdx, "value size %d to large, skip this new value",
 			len(i.commitCtx.getCommitValue()))
-		i.commitCtx.setResultOnlyRet(paxosTryCommitRet_Value_Size_TooLarge)
+		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_Value_Size_TooLarge))
 		return
 	}
 
@@ -281,7 +281,7 @@ func (i *instance) onNewValueCommitTimeout() {
 	i.proposer.exitPrepare()
 	i.proposer.exitAccept()
 
-	i.commitCtx.setResult(paxosTryCommitRet_Timeout, i.proposer.getInstanceID(), "")
+	i.commitCtx.setResult(int32(paxosTryCommitRet_Timeout), i.proposer.getInstanceID(), nil)
 }
 
 func (i *instance) onReceiveMessage(msg []byte) error {
@@ -290,7 +290,7 @@ func (i *instance) onReceiveMessage(msg []byte) error {
 	return nil
 }
 
-func (i *instance) receiveMsgHeaderCheck(header *paxospb.Header, fromNodeID nodeId) bool {
+func (i *instance) receiveMsgHeaderCheck(header *paxospb.Header, fromNodeID uint64) bool {
 	if i.conf.getGid() == 0 || header.GetGid() == 0 {
 		return true
 	}
@@ -320,7 +320,7 @@ func (i *instance) onReceive(buf []byte) {
 		return
 	}
 
-	if header.GetCmdid() == msgCmd_PaxosMsg {
+	if header.GetCmdid() == int32(msgCmd_PaxosMsg) {
 		if i.checkpointMgr.inAskForCheckpointMode() {
 			lPLGImp(i.conf.groupIdx, "in ask for checkpoint mode, ignord paxosmsg")
 			return
@@ -338,7 +338,7 @@ func (i *instance) onReceive(buf []byte) {
 		}
 
 		i.onReceivePaxosMsg(paxosMsg, false)
-	} else if header.GetCmdid() == msgCmd_CheckpointMsg {
+	} else if header.GetCmdid() == int32(msgCmd_CheckpointMsg) {
 		checkpointMsg := &paxospb.CheckpointMsg{}
 		if err := checkpointMsg.Unmarshal(buf[bodyStartPos : bodyStartPos+bodyLen]); err != nil {
 			getBPInstance().OnReceiveParseError()
@@ -361,14 +361,14 @@ func (i *instance) onReceiveCheckpointMsg(checkpointMsg *paxospb.CheckpointMsg) 
 		i.conf.getMyNodeID(), checkpointMsg.GetFlag(), checkpointMsg.GetUUID(), checkpointMsg.GetSequence(), checkpointMsg.GetChecksum(),
 		checkpointMsg.GetOffset(), len(checkpointMsg.GetBuffer()), len(checkpointMsg.GetFilePath()))
 
-	if checkpointMsg.GetMsgType() == checkpointMsgType_SendFile {
+	if checkpointMsg.GetMsgType() == int32(checkpointMsgType_SendFile) {
 		if !i.checkpointMgr.inAskForCheckpointMode() {
 			lPLGImp(i.conf.groupIdx, "not in ask for checkpoint mode, ignord checkpoint msg")
 			return
 		}
 
 		i.learner.onSendCheckpoint(checkpointMsg)
-	} else if checkpointMsg.GetMsgType() == checkpointMsgType_SendFile_Ack {
+	} else if checkpointMsg.GetMsgType() == int32(checkpointMsgType_SendFile_Ack) {
 		i.learner.onSendCheckpointAck(checkpointMsg)
 	}
 }
@@ -380,7 +380,7 @@ func (i *instance) onReceivePaxosMsg(paxosMsg *paxospb.PaxosMsg, isRetry bool) e
 		i.proposer.getInstanceID(), paxosMsg.GetInstanceID(), paxosMsg.GetMsgType(),
 		paxosMsg.GetNodeID(), i.conf.getMyNodeID(), i.learner.getSeenLatestInstanceID())
 
-	switch paxosMsg.GetMsgType() {
+	switch paxosMsgType(paxosMsg.GetMsgType()) {
 
 	case msgType_PaxosPrepareReply, msgType_PaxosAcceptReply, msgType_PaxosProposal_SendNewValue:
 		if !i.conf.isValidNodeID(paxosMsg.GetNodeID()) {
@@ -441,9 +441,9 @@ func (i *instance) receiveMsgForProposer(paxosMsg *paxospb.PaxosMsg) error {
 			//This causes the node to remain in catch-up state.
 			//
 			//To avoid this problem, we need to deal with the expired reply.
-			if paxosMsg.GetMsgType() == msgType_PaxosPrepareReply {
+			if paxosMsg.GetMsgType() == int32(msgType_PaxosPrepareReply) {
 				i.proposer.onExpirePrepareReply(paxosMsg)
-			} else if paxosMsg.GetMsgType() == msgType_PaxosAcceptReply {
+			} else if paxosMsg.GetMsgType() == int32(msgType_PaxosAcceptReply) {
 				i.proposer.onExpiredAcceptReply(paxosMsg)
 			}
 		}
@@ -452,9 +452,9 @@ func (i *instance) receiveMsgForProposer(paxosMsg *paxospb.PaxosMsg) error {
 		return nil
 	}
 
-	if paxosMsg.GetMsgType() == msgType_PaxosPrepareReply {
+	if paxosMsg.GetMsgType() == int32(msgType_PaxosPrepareReply) {
 		i.proposer.onPrepareReply(paxosMsg)
-	} else if paxosMsg.GetMsgType() == msgType_PaxosAcceptReply {
+	} else if paxosMsg.GetMsgType() == int32(msgType_PaxosAcceptReply) {
 		i.proposer.onAcceptReply(paxosMsg)
 	}
 
@@ -475,15 +475,15 @@ func (i *instance) receiveMsgForAcceptor(paxosMsg *paxospb.PaxosMsg, isRetry boo
 		//skip success message
 		newPaxosMsg := &paxospb.PaxosMsg{}
 		newPaxosMsg.InstanceID = i.acceptor.getInstanceID()
-		newPaxosMsg.MsgType = msgType_PaxosLearner_ProposerSendSuccess
+		newPaxosMsg.MsgType = int32(msgType_PaxosLearner_ProposerSendSuccess)
 
 		i.receiveMsgForLearner(newPaxosMsg)
 	}
 
 	if paxosMsg.GetInstanceID() == i.acceptor.getInstanceID() {
-		if paxosMsg.GetMsgType() == msgType_PaxosPrepare {
+		if paxosMsg.GetMsgType() == int32(msgType_PaxosPrepare) {
 			return i.acceptor.onPrepare(paxosMsg)
-		} else if paxosMsg.GetMsgType() == msgType_PaxosAccept {
+		} else if paxosMsg.GetMsgType() == int32(msgType_PaxosAccept) {
 			i.acceptor.onAccept(paxosMsg)
 		}
 	} else if !isRetry && paxosMsg.GetInstanceID() > i.acceptor.getInstanceID() {
@@ -509,7 +509,7 @@ func (i *instance) receiveMsgForAcceptor(paxosMsg *paxospb.PaxosMsg, isRetry boo
 
 func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 
-	switch paxosMsg.GetMsgType() {
+	switch paxosMsgType(paxosMsg.GetMsgType()) {
 	case msgType_PaxosLearner_AskforLearn:
 		i.learner.onAskForLearn(paxosMsg)
 	case msgType_PaxosLearner_SendLearnValue:
@@ -544,14 +544,14 @@ func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 			getBPInstance().OnInstanceLearnedSMExecuteFail()
 
 			lPLGErr(i.conf.groupIdx, "SMExecute fail, instanceid %d, not increase instanceid", i.learner.getInstanceID())
-			i.commitCtx.setResult(paxosTryCommitRet_ExecuteFail, i.learner.getInstanceID(), i.learner.getLearnValue())
+			i.commitCtx.setResult(int32(paxosTryCommitRet_ExecuteFail), i.learner.getInstanceID(), i.learner.getLearnValue())
 
 			i.proposer.cancelSkipPrepare()
 
 			return errInstanceExecuteFailed
 		}
 		//this paxos instance end, tell proposal done
-		i.commitCtx.setResult(paxosTryCommitRet_Ok, i.learner.getInstanceID(), i.learner.getLearnValue())
+		i.commitCtx.setResult(int32(paxosTryCommitRet_Ok), i.learner.getInstanceID(), i.learner.getLearnValue())
 
 		if i.commitTimerID > 0 {
 			i.commitTimerID = i.loop.removeTimer(i.commitTimerID)
@@ -597,7 +597,7 @@ func (i *instance) onTimeout(timerID uint32, typ timerType) {
 	case timer_Proposer_Accept_Timeout:
 		i.proposer.onAcceptTimeout()
 	case timer_Learner_AskForLearn_Noop:
-		i.learner.askForLearnNoop()
+		i.learner.askForLearnNoop(false)
 	case timer_Instance_Commit_Timeout:
 		i.onNewValueCommitTimeout()
 	default:
@@ -657,7 +657,7 @@ func (i *instance) getInstanceValue(instanceID uint64) ([]byte, int64, error) {
 
 	smID := int64(binary.LittleEndian.Uint64(state.GetAcceptedValue()))
 
-	return smID, state.GetAcceptedValue()[8:], nil
+	return state.GetAcceptedValue()[8:], smID, nil
 }
 
 func (i *instance) stop() {

@@ -11,7 +11,7 @@ import (
 type checkpointReceiver struct {
 	conf          *config
 	logStorage    LogStorage
-	senderNodeID  nodeId
+	senderNodeID  uint64
 	uuid          uint64
 	sequence      uint64
 	hasInitDirMap map[string]bool
@@ -32,7 +32,7 @@ func (c *checkpointReceiver) reset() {
 	c.sequence = 0
 }
 
-func (c *checkpointReceiver) newReceiver(senderNodeID nodeId, uuid uint64) error {
+func (c *checkpointReceiver) newReceiver(senderNodeID uint64, uuid uint64) error {
 	if err := c.clearCheckpointTmp(); err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (c *checkpointReceiver) clearCheckpointTmp() error {
 	return err
 }
 
-func (c *checkpointReceiver) isReceiverFinish(senderNodeID nodeId, uuid uint64, endSequence uint64) bool {
+func (c *checkpointReceiver) isReceiverFinish(senderNodeID uint64, uuid uint64, endSequence uint64) bool {
 	if senderNodeID == c.senderNodeID && uuid == c.uuid && endSequence == c.sequence+1 {
 		return true
 	}
@@ -109,7 +109,7 @@ func (c *checkpointReceiver) initFilePath(filePath string) (string, error) {
 			if _, ok := c.hasInitDirMap[formatFilePath]; !ok {
 				err := c.createDir(formatFilePath)
 				if err != nil {
-					return err
+					return "", err
 				}
 
 				c.hasInitDirMap[formatFilePath] = true
@@ -119,7 +119,7 @@ func (c *checkpointReceiver) initFilePath(filePath string) (string, error) {
 
 	lPLGImp(c.conf.groupIdx, "ok, format filepath %s", formatFilePath)
 
-	return nil
+	return formatFilePath, nil
 }
 
 func (c *checkpointReceiver) createDir(dirPath string) error {
@@ -166,7 +166,7 @@ func (c *checkpointReceiver) receiveCheckpoint(checkpointMsg *paxospb.Checkpoint
 
 	defer fd.Close()
 	fileOffset, err := fd.Seek(0, os.SEEK_END)
-	if fileOffset != checkpointMsg.GetOffset() {
+	if fileOffset != int64(checkpointMsg.GetOffset()) {
 		lPLGErr(c.conf.groupIdx, "file.offset %d not equal to msg.offset %d, error: %v", fileOffset, checkpointMsg.GetOffset(), err)
 		return errFileOffsetMismatch
 	}

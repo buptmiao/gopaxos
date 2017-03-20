@@ -7,10 +7,10 @@ import (
 
 type ballotNumber struct {
 	proposalID uint64
-	nodeID     nodeId
+	nodeID     uint64
 }
 
-func newBallotNumber(pid uint64, nid nodeId) *ballotNumber {
+func newBallotNumber(pid uint64, nid uint64) *ballotNumber {
 	return &ballotNumber{
 		proposalID: pid,
 		nodeID:     nid,
@@ -118,14 +118,14 @@ func (b base) packCheckpointMsg(checkpointMsg *paxospb.CheckpointMsg) ([]byte, e
 	return b.packBaseMsg(body, cmd), nil
 }
 
-func (b base) packBaseMsg(body []byte, cmd int32) []byte {
+func (b base) packBaseMsg(body []byte, cmd msgCmd) []byte {
 	groupIdx := make([]byte, 8)
 	binary.LittleEndian.PutUint64(groupIdx, uint64(b.conf.groupIdx))
 
 	header := &paxospb.Header{}
 	header.Gid = b.conf.getGid()
 	header.Rid = 0
-	header.Cmdid = cmd
+	header.Cmdid = int32(cmd)
 	header.Version = 1
 
 	headerBuf, err := header.Marshal()
@@ -153,7 +153,7 @@ func (b base) packBaseMsg(body []byte, cmd int32) []byte {
 	return buf
 }
 
-func (b base) sendCheckpointMessage(sendToNodeID nodeId, checkpointMsg *paxospb.CheckpointMsg, protocol TransportType) error {
+func (b base) sendCheckpointMessage(sendToNodeID uint64, checkpointMsg *paxospb.CheckpointMsg, protocol TransportType) error {
 	if sendToNodeID == b.conf.getMyNodeID() {
 		return nil
 	}
@@ -166,7 +166,7 @@ func (b base) sendCheckpointMessage(sendToNodeID nodeId, checkpointMsg *paxospb.
 	return b.comm.SendMessage(sendToNodeID, buf, protocol)
 }
 
-func (b base) sendPaxosMessage(sendToNodeID nodeId, paxosMsg *paxospb.PaxosMsg, protocol TransportType) error {
+func (b base) sendPaxosMessage(sendToNodeID uint64, paxosMsg *paxospb.PaxosMsg, protocol TransportType) error {
 	if b.isTestMode {
 		return nil
 	}
@@ -186,9 +186,9 @@ func (b base) sendPaxosMessage(sendToNodeID nodeId, paxosMsg *paxospb.PaxosMsg, 
 	return b.comm.SendMessage(sendToNodeID, buf, protocol)
 }
 
-func (b base) broadcastMessage(paxosMsg *paxospb.PaxosMsg, runType int, protocol TransportType) error {
+func (b base) broadcastMessage(paxosMsg *paxospb.PaxosMsg, runType broadcastMessage_Type, protocol TransportType) error {
 	if b.isTestMode {
-		return 0
+		return nil
 	}
 
 	getBPInstance().BroadcastMessage()
@@ -240,7 +240,7 @@ func unpackBaseMsg(buf []byte) (*paxospb.Header, int, int, error) {
 
 	headerStartPos := 10
 
-	bodyStartPos := headerStartPos + headerLen
+	bodyStartPos := headerStartPos + int(headerLen)
 
 	if bodyStartPos > len(buf) {
 		getBPInstance().UnPackHeaderLenTooLong()
@@ -249,8 +249,8 @@ func unpackBaseMsg(buf []byte) (*paxospb.Header, int, int, error) {
 		return nil, 0, 0, errHeaderLenTooLong
 	}
 
-	header := paxospb.Header{}
-	err := header.Unmarshal(buf[headerStartPos : headerStartPos+headerLen])
+	header := &paxospb.Header{}
+	err := header.Unmarshal(buf[headerStartPos : headerStartPos+int(headerLen)])
 	if err != nil {
 		lNLErr("Header.Unmarshal fail, skip this msg")
 		return nil, 0, 0, err
@@ -288,9 +288,9 @@ func unpackBaseMsg(buf []byte) (*paxospb.Header, int, int, error) {
 ///////////////////////////////////////////////////////////////////////////////
 type msgCounter struct {
 	conf                        *config
-	receiveMsgNodeIDSet         map[nodeId]struct{}
-	rejectMsgNodeIDSet          map[nodeId]struct{}
-	promiseOrAcceptMsgNodeIDSet map[nodeId]struct{}
+	receiveMsgNodeIDSet         map[uint64]struct{}
+	rejectMsgNodeIDSet          map[uint64]struct{}
+	promiseOrAcceptMsgNodeIDSet map[uint64]struct{}
 }
 
 func newMsgCounter(conf *config) *msgCounter {
@@ -303,24 +303,24 @@ func newMsgCounter(conf *config) *msgCounter {
 }
 
 func (m *msgCounter) startNewRound() {
-	m.receiveMsgNodeIDSet = make(map[nodeId]struct{})
-	m.rejectMsgNodeIDSet = make(map[nodeId]struct{})
-	m.promiseOrAcceptMsgNodeIDSet = make(map[nodeId]struct{})
+	m.receiveMsgNodeIDSet = make(map[uint64]struct{})
+	m.rejectMsgNodeIDSet = make(map[uint64]struct{})
+	m.promiseOrAcceptMsgNodeIDSet = make(map[uint64]struct{})
 }
 
-func (m *msgCounter) addReceive(id nodeId) {
+func (m *msgCounter) addReceive(id uint64) {
 	if _, ok := m.receiveMsgNodeIDSet[id]; !ok {
 		m.receiveMsgNodeIDSet[id] = struct{}{}
 	}
 }
 
-func (m *msgCounter) addReject(id nodeId) {
+func (m *msgCounter) addReject(id uint64) {
 	if _, ok := m.rejectMsgNodeIDSet[id]; !ok {
 		m.rejectMsgNodeIDSet[id] = struct{}{}
 	}
 }
 
-func (m *msgCounter) addPromiseOrAccept(id nodeId) {
+func (m *msgCounter) addPromiseOrAccept(id uint64) {
 	if _, ok := m.promiseOrAcceptMsgNodeIDSet[id]; !ok {
 		m.promiseOrAcceptMsgNodeIDSet[id] = struct{}{}
 	}

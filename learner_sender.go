@@ -1,6 +1,7 @@
 package gopaxos
 
 import (
+	"math"
 	"time"
 )
 
@@ -12,7 +13,7 @@ type learnerSender struct {
 	isSending       bool
 	absLastSendTime uint64
 	beginInstanceID uint64
-	sendToNodeID    nodeId
+	sendToNodeID    uint64
 	isConfirmed     bool
 	ackInstanceID   uint64
 	absLastAckTime  uint64
@@ -28,6 +29,7 @@ func newLearnerSender(conf *config, learner *learner, paxosLog *paxosLog) *learn
 		learner:  learner,
 		paxosLog: paxosLog,
 		ackLead:  getInsideOptionsInstance().getLearnerSenderAckLead(),
+		slock:    newSerialLock(),
 	}
 
 	ret.sendDone()
@@ -79,12 +81,12 @@ func (l *learnerSender) isIMSending() bool {
 	}
 
 	now := getSteadyClockMS()
-	passTime := 0
+	var passTime uint64
 	if now > l.absLastSendTime {
 		passTime = now - l.absLastSendTime
 	}
 
-	if passTime >= getInsideOptionsInstance().getLearnerSenderPrepareTimeoutMs() {
+	if passTime >= uint64(getInsideOptionsInstance().getLearnerSenderPrepareTimeoutMs()) {
 		return false
 	}
 
@@ -108,14 +110,14 @@ func (l *learnerSender) checkAck(instanceID uint64) bool {
 		return false
 	}
 
-	for instanceID > l.ackInstanceID+l.ackLead {
+	for instanceID > l.ackInstanceID+uint64(l.ackLead) {
 		now := getSteadyClockMS()
-		passTime := 0
+		var passTime uint64
 		if now > l.absLastAckTime {
 			passTime = now - l.absLastAckTime
 		}
 
-		if passTime >= getInsideOptionsInstance().getLearnerSenderAckTimeoutMs() {
+		if passTime >= uint64(getInsideOptionsInstance().getLearnerSenderAckTimeoutMs()) {
 			getBPInstance().SenderAckTimeout()
 			lPLGErr(l.conf.groupIdx, "Ack timeout, last acktime %d now send instanceid %d",
 				l.absLastAckTime, instanceID)
@@ -131,7 +133,7 @@ func (l *learnerSender) checkAck(instanceID uint64) bool {
 	return true
 }
 
-func (l *learnerSender) prepare(beginInstanceID uint64, sendToNodeID nodeId) bool {
+func (l *learnerSender) prepare(beginInstanceID uint64, sendToNodeID uint64) bool {
 	l.slock.lock()
 	defer l.slock.unlock()
 
@@ -149,7 +151,7 @@ func (l *learnerSender) prepare(beginInstanceID uint64, sendToNodeID nodeId) boo
 	return false
 }
 
-func (l *learnerSender) confirm(beginInstanceID uint64, sendToNodeID nodeId) bool {
+func (l *learnerSender) confirm(beginInstanceID uint64, sendToNodeID uint64) bool {
 	l.slock.lock()
 	defer l.slock.unlock()
 
@@ -165,7 +167,7 @@ func (l *learnerSender) confirm(beginInstanceID uint64, sendToNodeID nodeId) boo
 	return false
 }
 
-func (l *learnerSender) ack(ackInstanceID uint64, fromNodeID nodeId) {
+func (l *learnerSender) ack(ackInstanceID uint64, fromNodeID uint64) {
 	l.slock.lock()
 	defer l.slock.unlock()
 
@@ -190,7 +192,7 @@ func (l *learnerSender) waitToSend() {
 	}
 }
 
-func (l *learnerSender) sendLearnedValue(beginInstanceID uint64, sendToNodeID nodeId) {
+func (l *learnerSender) sendLearnedValue(beginInstanceID uint64, sendToNodeID uint64) {
 	lPLGHead(l.conf.groupIdx, "BeginInstanceID %d SendToNodeID %d", beginInstanceID, sendToNodeID)
 	sendInstanceID := beginInstanceID
 
@@ -226,7 +228,7 @@ func (l *learnerSender) sendLearnedValue(beginInstanceID uint64, sendToNodeID no
 
 		if sendCount >= sendInterval {
 			sendCount = 0
-			time.Sleep(time.Millisecond * sleepMs)
+			time.Sleep(time.Millisecond * time.Duration(sleepMs))
 		}
 	}
 
@@ -235,7 +237,7 @@ func (l *learnerSender) sendLearnedValue(beginInstanceID uint64, sendToNodeID no
 	lPLGImp(l.conf.groupIdx, "SendDone, SendEndInstanceID %d", sendInstanceID)
 }
 
-func (l *learnerSender) sendOne(sendInstanceID uint64, sendToNodeID nodeId, lastChecksum *uint32) error {
+func (l *learnerSender) sendOne(sendInstanceID uint64, sendToNodeID uint64, lastChecksum *uint32) error {
 	getBPInstance().SenderSendOnePaxosLog()
 	state, err := l.paxosLog.readState(l.conf.groupIdx, sendInstanceID)
 	if err != nil {
@@ -244,7 +246,7 @@ func (l *learnerSender) sendOne(sendInstanceID uint64, sendToNodeID nodeId, last
 
 	ballot := newBallotNumber(state.GetAcceptedID(), state.GetAcceptedNodeID())
 
-	err = l.learner.sendLearnValue(sendToNodeID, sendInstanceID, ballot, state.GetAcceptedValue(), *lastChecksum)
+	err = l.learner.sendLearnValue(sendToNodeID, sendInstanceID, ballot, state.GetAcceptedValue(), *lastChecksum, true)
 
 	*lastChecksum = state.GetChecksum()
 
@@ -257,7 +259,7 @@ func (l *learnerSender) sendDone() {
 
 	l.isSending = false
 	l.isConfirmed = false
-	l.beginInstanceID = uint64(-1)
+	l.beginInstanceID = math.MaxUint64
 	l.sendToNodeID = nullNode
 	l.absLastSendTime = 0
 	l.ackInstanceID = 0

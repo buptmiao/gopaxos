@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/pkg/random"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"strconv"
 	"strings"
 )
 
@@ -31,6 +30,38 @@ var (
 
 //PaxosComparator implements the interface defined in leveldb Comparer
 type paxosComparator struct {
+}
+
+func (p paxosComparator) Compare(a, b []byte) int {
+	if len(a) != 8 || len(b) != 8 {
+		lNLErr("assert len(a) %d, len(b) %d", len(a), len(b))
+		os.Exit(1)
+	}
+
+	ia := binary.LittleEndian.Uint64(a)
+	ib := binary.LittleEndian.Uint64(b)
+
+	if ia == ib {
+		return 0
+	}
+
+	if ia < ib {
+		return -1
+	}
+
+	return 1
+}
+
+func (p paxosComparator) Name() string {
+	return "gopaxos"
+}
+
+func (p paxosComparator) Separator(dst, a, b []byte) []byte {
+	return nil
+}
+
+func (p paxosComparator) Successor(dst, b []byte) []byte {
+	return nil
 }
 
 // db
@@ -90,14 +121,14 @@ func (d *db) clearAllLog() error {
 	}
 
 	wo := writeOptions(true)
-	if systemVar != "" {
+	if systemVar != nil {
 		err = d.setSystemVariables(wo, systemVar)
 		if err != nil {
 			lPLGErr(d.groupIdx, "SetSystemVariables fail, ret %v", err)
 			return err
 		}
 	}
-	if masterVar != "" {
+	if masterVar != nil {
 		err = d.setMasterVariables(wo, masterVar)
 		if err != nil {
 			lPLGErr(d.groupIdx, "SetMasterVariables fail, ret %v", err)
@@ -189,7 +220,7 @@ func (d *db) rebuildOneIndex(instanceID uint64, sFileID string) error {
 	return nil
 }
 
-func (d *db) getFromLevelDB(instanceID uint64) (string, error) {
+func (d *db) getFromLevelDB(instanceID uint64) ([]byte, error) {
 	key := d.genKey(instanceID)
 
 	value, err := d.levelDB.Get([]byte(key), nil)
@@ -197,36 +228,36 @@ func (d *db) getFromLevelDB(instanceID uint64) (string, error) {
 		if err == leveldb.ErrNotFound {
 			getBPInstance().LevelDBGetNotExist()
 			lPLGDebug(d.groupIdx, "LevelDB.Get not found, instanceid %d", instanceID)
-			return "", ErrNotFoundFromStorage
+			return nil, ErrNotFoundFromStorage
 		}
 		getBPInstance().LevelDBGetFail()
 		lPLGErr(d.groupIdx, "LevelDB.Get fail, instanceid %d", instanceID)
-		return "", err
+		return nil, err
 	}
 
 	return value, nil
 }
 
-func (d *db) get(instanceID uint64) (string, error) {
+func (d *db) get(instanceID uint64) ([]byte, error) {
 	if !d.hasInit {
 		lPLGErr(d.groupIdx, "no init yet")
-		return "", errDBNotInit
+		return nil, errDBNotInit
 	}
 	sFileID, err := d.getFromLevelDB(instanceID)
 	if err != nil {
-		lPLGErr(d.groupIdx, "get from level db failed", err)
-		return "", ErrNotFoundFromStorage
+		lPLGErr(d.groupIdx, "get from level db failed, error: %v", err)
+		return nil, ErrNotFoundFromStorage
 	}
-	value, fileInstanceID, err := d.fileIDToValue(sFileID)
+	value, fileInstanceID, err := d.fileIDToValue(string(sFileID))
 	if err != nil {
 		getBPInstance().FileIDToValueFail()
-		return "", err
+		return nil, err
 	}
 
 	if fileInstanceID != instanceID {
 		lPLGErr(d.groupIdx, "file instanceid %d not equal to key.instanceid %d",
 			fileInstanceID, instanceID)
-		return "", errFileInstanceIDMismatch
+		return nil, errFileInstanceIDMismatch
 	}
 
 	return value, nil
@@ -236,16 +267,15 @@ func (d *db) valueToFileID(wo writeOptions, instanceID uint64, value []byte) (st
 	sFileID, err := d.valueStore.append(wo, instanceID, value)
 	if err != nil {
 		getBPInstance().ValueToFileIDFail()
-		lPLGErr(d.groupIdx, "fail, ret %v", err)
+		lPLGErr(d.groupIdx, "fail, error: %v", err)
 	}
 	return sFileID, err
 }
 
-func (d *db) fileIDToValue(sFileID string) (string, uint64, error) {
-	var value string
-	instanceID, err := d.valueStore.read(sFileID, &value)
+func (d *db) fileIDToValue(sFileID string) ([]byte, uint64, error) {
+	value, instanceID, err := d.valueStore.read(sFileID)
 	if err != nil {
-		lPLGErr(d.groupIdx, "fail, ret %v", err)
+		lPLGErr(d.groupIdx, "fail, error: %v", err)
 	}
 	return value, instanceID, err
 }
@@ -282,7 +312,7 @@ func (d *db) put(wo writeOptions, instanceID uint64, value []byte) error {
 		return err
 	}
 
-	return d.putToLevelDB(false, instanceID, &sFileID)
+	return d.putToLevelDB(false, instanceID, []byte(sFileID))
 }
 
 func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
@@ -310,7 +340,7 @@ func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 	}
 
 	opt := &opt.WriteOptions{
-		Sync: wo,
+		Sync: bool(wo),
 	}
 	err = d.levelDB.Delete([]byte(key), opt)
 	if err != nil {
@@ -348,7 +378,7 @@ func (d *db) del(wo writeOptions, instanceID uint64) error {
 	}
 
 	opt := &opt.WriteOptions{
-		Sync: wo,
+		Sync: bool(wo),
 	}
 	if err := d.levelDB.Delete([]byte(key), opt); err != nil {
 		lPLGErr(d.groupIdx, "LevelDB.Delete fail, instanceid %d", instanceID)
@@ -360,8 +390,8 @@ func (d *db) del(wo writeOptions, instanceID uint64) error {
 
 //
 func (d *db) getMaxInstanceID() (uint64, error) {
-	instanceID := minChosenKey
-	it := db.levelDB.NewIterator(nil, nil)
+	instanceID := uint64(minChosenKey)
+	it := d.levelDB.NewIterator(nil, nil)
 	defer it.Release()
 
 	it.Last()
@@ -379,7 +409,9 @@ func (d *db) getMaxInstanceID() (uint64, error) {
 }
 
 func (d *db) genKey(instanceID uint64) string {
-	return strconv.FormatUint(instanceID, 10)
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, instanceID)
+	return string(buf)
 }
 
 func (d *db) getInstanceIDFromKey(key string) uint64 {
@@ -395,12 +427,12 @@ func (d *db) getMinChosenInstanceID() (uint64, error) {
 	}
 
 	value, err := d.getFromLevelDB(getMinKey)
-	if err != nil && err != leveldb.ErrNotFound {
+	if err != nil && err != ErrNotFoundFromStorage {
 		lPLGErr(d.groupIdx, "fail, error: %v", err)
 		return 0, err
 	}
 
-	if err == leveldb.ErrNotFound {
+	if err == ErrNotFoundFromStorage {
 		lPLGErr(d.groupIdx, "no min chosen instanceid")
 		return 0, nil
 	}
@@ -435,7 +467,7 @@ func (d *db) setMinChosenInstanceID(wo writeOptions, minInstanceID uint64) error
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, minInstanceID)
 
-	if err := d.putToLevelDB(true, setMinKey, &string(buf)); err != nil {
+	if err := d.putToLevelDB(true, setMinKey, buf); err != nil {
 		return err
 	}
 
@@ -480,6 +512,12 @@ type multiDatabase struct {
 	dbList []*db
 }
 
+func newMultiDatabase() *multiDatabase {
+	return &multiDatabase{
+		dbList: make([]*db, 0),
+	}
+}
+
 func (m *multiDatabase) init(dbPath string, groupCount int) error {
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		lPLErr("DBPath not exist or no limit to open, %s", dbPath)
@@ -522,7 +560,7 @@ func (m *multiDatabase) GetLogStorageDirPath(groupIdx int) string {
 
 func (m *multiDatabase) Get(groupIdx int, instanceID uint64) ([]byte, error) {
 	if groupIdx >= len(m.dbList) {
-		return "", ErrGroupIdxOutOfRange
+		return nil, ErrGroupIdxOutOfRange
 	}
 
 	return m.dbList[groupIdx].get(instanceID)
@@ -554,7 +592,7 @@ func (m *multiDatabase) forceDel(wo writeOptions, groupIdx int, instanceID uint6
 
 func (m *multiDatabase) GetMaxInstanceID(groupIdx int) (uint64, error) {
 	if groupIdx >= len(m.dbList) {
-		return ErrGroupIdxOutOfRange
+		return 0, ErrGroupIdxOutOfRange
 	}
 
 	return m.dbList[groupIdx].getMaxInstanceID()
@@ -570,7 +608,7 @@ func (m *multiDatabase) SetMinChosenInstanceID(wo writeOptions, groupIdx int, mi
 
 func (m *multiDatabase) GetMinChosenInstanceID(groupIdx int) (uint64, error) {
 	if groupIdx >= len(m.dbList) {
-		return ErrGroupIdxOutOfRange
+		return 0, ErrGroupIdxOutOfRange
 	}
 
 	return m.dbList[groupIdx].getMinChosenInstanceID()
@@ -594,7 +632,7 @@ func (m *multiDatabase) SetSystemVariables(wo writeOptions, groupIdx int, value 
 
 func (m *multiDatabase) GetSystemVariables(groupIdx int) ([]byte, error) {
 	if groupIdx >= len(m.dbList) {
-		return ErrGroupIdxOutOfRange
+		return nil, ErrGroupIdxOutOfRange
 	}
 
 	return m.dbList[groupIdx].getSystemVariables()
@@ -610,7 +648,7 @@ func (m *multiDatabase) SetMasterVariables(wo writeOptions, groupIdx int, value 
 
 func (m *multiDatabase) GetMasterVariables(groupIdx int) ([]byte, error) {
 	if groupIdx >= len(m.dbList) {
-		return ErrGroupIdxOutOfRange
+		return nil, ErrGroupIdxOutOfRange
 	}
 
 	return m.dbList[groupIdx].getMasterVariables()

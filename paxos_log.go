@@ -75,7 +75,7 @@ func (p *paxosLog) readState(groupIdx int, instanceID uint64) (*paxospb.Acceptor
 	}
 
 	if err == ErrNotFoundFromStorage {
-		lPLGImp("DB.Get not found, groupidx %d", groupIdx)
+		lPLGImp(groupIdx, "DB.Get not found, groupidx %d", groupIdx)
 		return nil, err
 	}
 

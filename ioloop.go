@@ -29,6 +29,8 @@ func newIOLoop(conf *config, i *instance) *ioLoop {
 	return &ioLoop{
 		conf:         conf,
 		instance:     i,
+		timer:        newTimer(),
+		timerIDMap:   make(map[uint32]bool),
 		messageQueue: make(chan []byte, getInsideOptionsInstance().getMaxIOLoopQueueLen()),
 		retryQueue:   list.New(),
 	}
@@ -54,13 +56,13 @@ func (i *ioLoop) run() {
 		select {
 		case msg := <-i.messageQueue:
 			if len(msg) != 0 {
-				atomic.AddInt64(&i.queueMemSize, -len(msg))
+				atomic.AddInt64(&i.queueMemSize, int64(-len(msg)))
 				i.instance.onReceive(msg)
 
 				getBPInstance().OutQueueMsg()
 			}
 
-		case <-time.After(time.Millisecond * nextTimeout):
+		case <-time.After(time.Millisecond * time.Duration(nextTimeout)):
 			break
 		}
 
@@ -82,7 +84,7 @@ func (i *ioLoop) addTimer(timeout int, typ timerType) (uint32, bool) {
 		return 0, true
 	}
 
-	absTime := getSteadyClockMS() + timeout
+	absTime := getSteadyClockMS() + uint64(timeout)
 	timerID := i.timer.addTimerWithType(absTime, typ)
 	i.timerIDMap[timerID] = true
 	return timerID, true
@@ -113,7 +115,7 @@ func (i *ioLoop) addMessage(msg []byte) error {
 	}
 
 	i.messageQueue <- msg
-	atomic.AddInt64(&i.queueMemSize, len(msg))
+	atomic.AddInt64(&i.queueMemSize, int64(len(msg)))
 
 	return nil
 }
