@@ -203,13 +203,11 @@ func (b base) broadcastMessage(paxosMsg *paxospb.PaxosMsg, runType broadcastMess
 	if err != nil {
 		return err
 	}
-
 	err = b.comm.BroadcastMessage(buf, protocol)
 
 	if runType == broadcastMessage_Type_RunSelf_Final {
 		b.instance.onReceivePaxosMsg(paxosMsg, false)
 	}
-
 	return err
 }
 

@@ -220,7 +220,6 @@ func (i *instance) checkNewValue() {
 	if !i.commitCtx.isNewCommit() {
 		return
 	}
-
 	if !i.learner.isIMLatest() {
 		return
 	}
@@ -230,13 +229,11 @@ func (i *instance) checkNewValue() {
 		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_Follower_Cannot_Commit))
 		return
 	}
-
 	if !i.conf.checkConfig() {
 		lPLGErr(i.conf.groupIdx, "I'm not in membership, skip this new value")
 		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_IM_Not_In_Membership))
 		return
 	}
-
 	if len(i.commitCtx.getCommitValue()) > getInsideOptionsInstance().getMaxBufferSize() {
 		lPLGErr(i.conf.groupIdx, "value size %d to large, skip this new value",
 			len(i.commitCtx.getCommitValue()))
@@ -245,7 +242,6 @@ func (i *instance) checkNewValue() {
 	}
 
 	i.commitCtx.startCommit(i.proposer.getInstanceID())
-
 	if i.commitCtx.getTimeoutMs() != -1 {
 		i.commitTimerID, _ = i.loop.addTimer(i.commitCtx.getTimeoutMs(), timer_Instance_Commit_Timeout)
 	}

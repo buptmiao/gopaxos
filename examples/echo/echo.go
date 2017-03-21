@@ -119,7 +119,7 @@ func (e *echoServer) RunPaxos() error {
 	opt.GroupCount = 1
 	opt.MyNode = e.myNode
 	opt.NodeInfoList = e.nodeList
-	//opt.LogLevel = gopaxos.LogLevel_Verbose
+	opt.LogLevel = gopaxos.LogLevel_Info
 
 	smInfo := gopaxos.NewGroupInfo()
 

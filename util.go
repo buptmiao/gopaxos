@@ -115,16 +115,13 @@ func (t timeStat) point() int {
 //
 ///////////////////////////////////////////////////////////////////////////////
 type serialLock struct {
-	mu     sync.Mutex
-	muCond sync.Mutex
-	cond   *sync.Cond
+	mu sync.Mutex
+	c  chan struct{}
 }
 
 func newSerialLock() *serialLock {
 	return &serialLock{
-		mu:     sync.Mutex{},
-		muCond: sync.Mutex{},
-		cond:   sync.NewCond(&sync.Mutex{}),
+		c: make(chan struct{}),
 	}
 }
 
@@ -137,33 +134,33 @@ func (s *serialLock) unlock() {
 }
 
 func (s *serialLock) wait() {
-	s.cond.L.Lock()
-	s.cond.Wait()
-	s.cond.L.Unlock()
+	s.mu.Unlock()
+	<-s.c
+	s.mu.Lock()
 }
 
 func (s *serialLock) interrupt() {
-	s.cond.Signal()
+	s.mu.Lock()
+	s.c <- struct{}{}
+	s.mu.Unlock()
 }
 
 func (s *serialLock) broadcast() {
-	s.cond.Broadcast()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	close(s.c)
+	s.c = make(chan struct{})
 }
 
 // timeout return false.
 func (s *serialLock) waitTime(timeout time.Duration) bool {
-	done := make(chan struct{})
-	go func() {
-		s.cond.L.Lock()
-		s.cond.Wait()
-		s.cond.L.Unlock()
-		close(done)
-	}()
+	s.mu.Unlock()
+	defer s.mu.Lock()
 	select {
+	case <-s.c:
+		return true
 	case <-time.After(timeout):
 		return false
-	case <-done:
-		return true
 	}
 }
 
@@ -383,7 +380,6 @@ func (t *timer) popTimeout() (uint32, timerType, bool) {
 	if obj.absTime > now {
 		return 0, 0, false
 	}
-
 	return obj.timerID, obj.typ, true
 }
 

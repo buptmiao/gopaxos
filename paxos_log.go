@@ -53,7 +53,7 @@ func (p *paxosLog) readLog(groupIdx int, instanceID uint64) ([]byte, error) {
 func (p *paxosLog) writeState(wo writeOptions, groupIdx int, instanceID uint64, state *paxospb.AcceptorStateData) error {
 	value, err := state.Marshal()
 	if err != nil {
-		lPLGErr(groupIdx, "State.Marshal fail")
+		lPLGErr(groupIdx, "State.Marshal fail, error: %v", err)
 		return err
 	}
 

@@ -30,13 +30,11 @@ func (c *committer) newValue(value []byte) int32 {
 
 func (c *committer) newValueGetID(value []byte, smCtx *SMCtx) (uint64, int32) {
 	getBPInstance().NewValue()
-
 	var ret int32
 	var instanceID uint64
 	for retryCount := 3; retryCount > 0; retryCount-- {
 		ts := timeStat(0)
 		ts.point()
-
 		instanceID, ret = c.newValueGetIDNoRetry(value, smCtx)
 		if ret != int32(paxosTryCommitRet_Conflict) {
 			if ret == 0 {
@@ -55,7 +53,6 @@ func (c *committer) newValueGetID(value []byte, smCtx *SMCtx) (uint64, int32) {
 			break
 		}
 	}
-
 	return instanceID, ret
 }
 
@@ -107,7 +104,6 @@ func (c *committer) newValueGetIDNoRetry(value []byte, smCtx *SMCtx) (uint64, in
 	packSMIDValue = c.smFac.packPaxosValue(packSMIDValue, smID)
 	c.ctx.newCommit(packSMIDValue, smCtx, leftTimeoutMs)
 	c.loop.addNotify()
-
 	return c.ctx.getResult()
 }
 

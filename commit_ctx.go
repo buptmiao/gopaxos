@@ -106,10 +106,9 @@ func (c *commitCtx) getResult() (uint64, int32) {
 	for !c.isCommitEnd {
 		c.slock.waitTime(time.Millisecond * 1000)
 	}
-
 	if c.commitRet == 0 {
 		succInstanceID = c.instanceID
-		lPLGImp(c.conf.groupIdx, "commit success, instanceid %lu", succInstanceID)
+		lPLGImp(c.conf.groupIdx, "commit success, instanceid %d", succInstanceID)
 	} else {
 		lPLGErr(c.conf.groupIdx, "commit fail, error: %d", c.commitRet)
 	}

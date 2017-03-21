@@ -181,10 +181,10 @@ func (i *ioLoop) dealWithTimeoutOne(timerID uint32, typ timerType) {
 // deal with events those are timeout, and return the next timeout interval.
 func (i *ioLoop) dealWithTimeout() int {
 	hasTimeout := true
-
+	var timerID uint32
+	var typ timerType
 	for hasTimeout {
-		timerID, typ, hasTimeout := i.timer.popTimeout()
-
+		timerID, typ, hasTimeout = i.timer.popTimeout()
 		if hasTimeout {
 			i.dealWithTimeoutOne(timerID, typ)
 			nextTimeout := i.timer.getNextTimeout()
@@ -193,7 +193,6 @@ func (i *ioLoop) dealWithTimeout() int {
 			}
 		}
 	}
-
 	return 0
 }
 

@@ -195,7 +195,7 @@ func newAcceptorState(conf *config, ls LogStorage) *acceptorState {
 
 func (a *acceptorState) init() {
 	a.acceptedBallot.reset()
-	a.acceptedValue = nil
+	a.acceptedValue = make([]byte, 0)
 	a.checksum = 0
 }
 

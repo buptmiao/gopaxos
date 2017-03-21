@@ -57,10 +57,10 @@ func (l *logger) LogError(format string, args ...interface{}) {
 func (l *logger) LogStatus(format string, args ...interface{}) {
 	newFormat := format + "\n"
 	if l.logFunc != nil {
-		l.logFunc(LogLevel_Error, newFormat, args...)
+		l.logFunc(LogLevel_Verbose, newFormat, args...)
 		return
 	}
-	if l.logLevel < LogLevel_Error {
+	if l.logLevel < LogLevel_Verbose {
 		return
 	}
 	fmt.Printf(newFormat, args...)

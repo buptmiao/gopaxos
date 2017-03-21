@@ -373,6 +373,7 @@ func newProposerState(conf *config) *proposerState {
 
 func (p *proposerState) init() {
 	p.highestOtherProposalID = 0
+	p.highestOtherPreAcceptBallot = newBallotNumber(0, 0)
 	p.value = nil
 }
 

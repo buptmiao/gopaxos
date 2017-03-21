@@ -347,7 +347,6 @@ func (n *node) Propose(groupIdx int, value []byte, ctx *SMCtx) (uint64, error) {
 	if !n.checkGroupID(groupIdx) {
 		return 0, errGroupIdxWrong
 	}
-
 	instanceID, ret := n.groupList[groupIdx].getCommitter().newValueGetID(value, ctx)
 	return instanceID, RetErrMap[ret]
 }

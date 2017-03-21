@@ -349,7 +349,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 	writeLen, err := fd.Write(l.tmpAppendBuf)
 	if err != nil {
 		getBPInstance().AppendDataFail()
-		lPLGErr(l.groupIdx, "writelen %d not equal to %d, buffersize %u, err: %v",
+		lPLGErr(l.groupIdx, "writelen %d not equal to %d, buffersize %d, err: %v",
 			writeLen, tmpBufLen, len(buf), err)
 		return "", err
 	}
@@ -372,7 +372,7 @@ func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (strin
 
 	sFileID := l.genFileID(fileID, offset, checksum)
 
-	lPLGImp(l.groupIdx, "ok, offset %d fileid %d checksum %u instanceid %lu buffer size %d usetime %dms sync %v",
+	lPLGImp(l.groupIdx, "ok, offset %d fileid %d checksum %d instanceid %d buffer size %d usetime %dms sync %v",
 		offset, fileID, checksum, instanceID, len(buf), useTimeMs, wo)
 
 	return sFileID, nil
@@ -431,7 +431,7 @@ func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 	readLen, err := fd.Read(tmpBuf)
 	if err != nil {
 		fd.Close()
-		lPLGErr(l.groupIdx, "readlen %d not qual to %u", readLen, bufLen)
+		lPLGErr(l.groupIdx, "readlen %d not qual to %d", readLen, bufLen)
 		return nil, 0, err
 	}
 
@@ -439,13 +439,13 @@ func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 
 	if fileChecksum := crc(0, tmpBuf); fileChecksum != checksum {
 		getBPInstance().GetFileChecksumNotEqual()
-		lPLGErr(l.groupIdx, "checksum not equal, filechecksum %u checksum %u", fileChecksum, checksum)
+		lPLGErr(l.groupIdx, "checksum not equal, filechecksum %d checksum %d", fileChecksum, checksum)
 		return nil, 0, errChecksumNotMatch
 	}
 
 	instanceID := binary.LittleEndian.Uint64(tmpBuf)
 	buf := tmpBuf[8:]
-	lPLGImp(l.groupIdx, "ok, fileid %d offset %d instanceid %lu buffer size %d",
+	lPLGImp(l.groupIdx, "ok, fileid %d offset %d instanceid %d buffer size %d",
 		fileID, offset, instanceID, bufLen-8)
 
 	return buf, instanceID, nil
