@@ -62,7 +62,6 @@ func (c *commitCtx) isMyCommit(instanceID uint64, learnValue []byte) (*SMCtx, bo
 	defer c.slock.unlock()
 
 	isMyCommit := false
-	lPLErr("here ******** %d %d %d  %d", c.instanceID, instanceID, len(c.value), len(learnValue))
 	if !c.isCommitEnd && c.instanceID == instanceID {
 		isMyCommit = bytes.Equal(learnValue, c.value)
 	}
@@ -80,7 +79,6 @@ func (c *commitCtx) setResultOnlyRet(commitRet int32) {
 
 func (c *commitCtx) setResult(commitRet int32, instanceID uint64, learnValue []byte) {
 	c.slock.lock()
-	defer c.slock.unlock()
 	if c.isCommitEnd || c.instanceID != instanceID {
 		return
 	}
@@ -94,6 +92,7 @@ func (c *commitCtx) setResult(commitRet int32, instanceID uint64, learnValue []b
 
 	c.isCommitEnd = true
 	c.value = nil
+	c.slock.unlock()
 	c.slock.interrupt()
 }
 

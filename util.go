@@ -140,8 +140,10 @@ func (s *serialLock) wait() {
 }
 
 func (s *serialLock) interrupt() {
+	s.mu.Lock()
 	close(s.c)
 	s.c = make(chan struct{})
+	s.mu.Unlock()
 }
 
 func (s *serialLock) broadcast() {
@@ -282,9 +284,8 @@ func (w *waitLock) lock(timeoutMs int) (int, bool) {
 
 func (w *waitLock) unlock() {
 	w.slock.lock()
-	defer w.slock.unlock()
-
 	w.isLockUsing = false
+	w.slock.unlock()
 	w.slock.interrupt()
 }
 
