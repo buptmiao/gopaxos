@@ -65,7 +65,7 @@ var (
 	errPaxosSystemError                = newPaxosError(int32(paxos_SystemError), "system error")
 	errGroupIdxWrong                   = newPaxosError(int32(paxos_GroupIdxWrong), "group index wrong")
 	errMembershipOpGidNotSame          = newPaxosError(int32(paxos_MembershipOp_GidNotSame), "membership operation, gid not same")
-	errMembershipOpVersionConflict     = newPaxosError(int32(paxos_MembershipOp_VersionConflit), "membership operation, version conflict")
+	errMembershipOpVersionConflict     = newPaxosError(int32(paxos_MembershipOp_VersionConflict), "membership operation, version conflict")
 	errMembershipOpNoGid               = newPaxosError(int32(paxos_MembershipOp_NoGid), "membership operation, no gid")
 	errMembershipOpNodeExists          = newPaxosError(int32(paxos_MembershipOp_Add_NodeExist), "membership operation, node already exists")
 	errMembershipOpRemoveNodeNotExists = newPaxosError(int32(paxos_MembershipOp_Remove_NodeNotExist), "membership operation, node does not exists")
@@ -78,7 +78,7 @@ var RetErrMap map[int32]error = map[int32]error{
 	int32(paxos_SystemError):                           errPaxosSystemError,
 	int32(paxos_GroupIdxWrong):                         errGroupIdxWrong,
 	int32(paxos_MembershipOp_GidNotSame):               errMembershipOpGidNotSame,
-	int32(paxos_MembershipOp_VersionConflit):           errMembershipOpVersionConflict,
+	int32(paxos_MembershipOp_VersionConflict):           errMembershipOpVersionConflict,
 	int32(paxos_MembershipOp_NoGid):                    errMembershipOpNoGid,
 	int32(paxos_MembershipOp_Add_NodeExist):            errMembershipOpNodeExists,
 	int32(paxos_MembershipOp_Remove_NodeNotExist):      errMembershipOpRemoveNodeNotExists,

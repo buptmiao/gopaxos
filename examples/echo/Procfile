@@ -1,0 +1,5 @@
+# Use goreman to run `go get github.com/mattn/goreman`
+
+node-1: go run echo.go -addr=127.0.0.1:11111 -members=127.0.0.1:11111,127.0.0.1:11112,127.0.0.1:11113
+node-2: go run echo.go -addr=127.0.0.1:11112 -members=127.0.0.1:11111,127.0.0.1:11112,127.0.0.1:11113
+node-3: go run echo.go -addr=127.0.0.1:11113 -members=127.0.0.1:11111,127.0.0.1:11112,127.0.0.1:11113

@@ -240,7 +240,6 @@ func (i *instance) checkNewValue() {
 		i.commitCtx.setResultOnlyRet(int32(paxosTryCommitRet_Value_Size_TooLarge))
 		return
 	}
-
 	i.commitCtx.startCommit(i.proposer.getInstanceID())
 	if i.commitCtx.getTimeoutMs() != -1 {
 		i.commitTimerID, _ = i.loop.addTimer(i.commitCtx.getTimeoutMs(), timer_Instance_Commit_Timeout)
@@ -266,7 +265,6 @@ func (i *instance) checkNewValue() {
 			v := i.smFac.beforePropose(i.conf.groupIdx, i.commitCtx.getCommitValue())
 			i.commitCtx.setCommitValue(v)
 		}
-
 		i.proposer.newValue(i.commitCtx.getCommitValue())
 	}
 }
@@ -411,6 +409,7 @@ func (i *instance) onReceivePaxosMsg(paxosMsg *paxospb.PaxosMsg, isRetry bool) e
 		msgType_PaxosLearner_AskforCheckpoint:
 
 		i.checksumLogic(paxosMsg)
+
 		return i.receiveMsgForLearner(paxosMsg)
 
 	default:
@@ -529,7 +528,7 @@ func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 
 		if !isMyCommit {
 			getBPInstance().OnInstanceLearnedNotMyCommit()
-			lPLGDebug(i.conf.groupIdx, "this value is not my commit")
+			lPLGDebug(i.conf.groupIdx, "this value is not my commit, instanceID: %d , value: %v", i.learner.getInstanceID(), i.learner.getLearnValue())
 		} else {
 			useTimeMs := i.timeStat.point()
 			getBPInstance().OnInstanceLearnedIsMyCommit(useTimeMs)
@@ -589,6 +588,7 @@ func (i *instance) getNowInstanceID() uint64 {
 func (i *instance) onTimeout(timerID uint32, typ timerType) {
 	switch typ {
 	case timer_Proposer_Prepare_Timeout:
+		lPLErr("here********** %d", typ)
 		i.proposer.onPrepareTimeout()
 	case timer_Proposer_Accept_Timeout:
 		i.proposer.onAcceptTimeout()

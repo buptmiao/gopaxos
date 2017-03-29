@@ -173,7 +173,6 @@ func (p *proposer) prepare(needNewBallot bool) {
 	p.addPrepareTimer(0)
 
 	lPLGHead(p.conf.groupIdx, "END OK")
-
 	p.broadcastMessage(paxosMsg, broadcastMessage_Type_RunSelf_First, UDP)
 }
 

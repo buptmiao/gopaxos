@@ -30,7 +30,7 @@ const (
 	paxos_SystemError                           paxosNodeFunctionRet = -1
 	paxos_GroupIdxWrong                         paxosNodeFunctionRet = -5
 	paxos_MembershipOp_GidNotSame               paxosNodeFunctionRet = -501
-	paxos_MembershipOp_VersionConflit           paxosNodeFunctionRet = -502
+	paxos_MembershipOp_VersionConflict 			paxosNodeFunctionRet = -502
 	paxos_MembershipOp_NoGid                    paxosNodeFunctionRet = 1001
 	paxos_MembershipOp_Add_NodeExist            paxosNodeFunctionRet = 1002
 	paxos_MembershipOp_Remove_NodeNotExist      paxosNodeFunctionRet = 1003

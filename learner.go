@@ -401,7 +401,6 @@ func (l *learner) proposerSendSuccess(learnInstanceID uint64, proposalID uint64)
 	paxosMsg.NodeID = l.conf.getMyNodeID()
 	paxosMsg.ProposalID = proposalID
 	paxosMsg.LastChecksum = l.getLastChecksum()
-
 	//run self first
 	l.broadcastMessage(paxosMsg, broadcastMessage_Type_RunSelf_First, UDP)
 }

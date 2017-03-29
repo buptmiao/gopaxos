@@ -83,10 +83,10 @@ func (i *ioLoop) addTimer(timeout int, typ timerType) (uint32, bool) {
 	if timeout == -1 {
 		return 0, true
 	}
-
 	absTime := getSteadyClockMS() + uint64(timeout)
 	timerID := i.timer.addTimerWithType(absTime, typ)
 	i.timerIDMap[timerID] = true
+
 	return timerID, true
 }
 

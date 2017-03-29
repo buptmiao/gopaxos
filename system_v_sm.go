@@ -86,7 +86,7 @@ func (s *systemVSM) Execute(groupIdx int, instanceID uint64, value []byte, ctx *
 	if sysVar.GetVersion() != s.sysVar.GetVersion() {
 		lPLGErr(s.groupIdx, "modify.version %d not equal to now.version %d", sysVar.GetVersion(), s.sysVar.GetVersion())
 		if ctx != nil {
-			ctx.Ctx = paxos_MembershipOp_VersionConflit
+			ctx.Ctx = paxos_MembershipOp_VersionConflict
 		}
 		return true
 	}
@@ -306,7 +306,7 @@ func (s *systemVSM) UnLockCheckpointState() {
 }
 
 func (s *systemVSM) BeforePropose(groupIdx int, value []byte) []byte {
-	return nil
+	return value
 }
 
 func (s *systemVSM) NeedCallBeforePropose() bool {

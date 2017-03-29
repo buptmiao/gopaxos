@@ -105,7 +105,7 @@ func (l *logStore) init(dbPath string, groupIdx int, d *db) error {
 	fileIDBuf := make([]byte, 8)
 	readLen, _ := l.metaFd.Read(fileIDBuf)
 	l.fileID = int64(binary.LittleEndian.Uint64(fileIDBuf))
-	if readLen != intlen {
+	if readLen != 8 {
 		if readLen == 0 {
 			l.fileID = 0
 		} else {
@@ -419,7 +419,7 @@ func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 	n, err := fd.Read(tmpBuf)
 	if err != nil {
 		fd.Close()
-		lPLGErr(l.groupIdx, "readlen %d not qual to 8, err: %v", n, err)
+		lPLGErr(l.groupIdx, "readlen %d not equal to 8, err: %v", n, err)
 		return nil, 0, err
 	}
 	bufLen := binary.LittleEndian.Uint64(tmpBuf)
@@ -428,7 +428,7 @@ func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 	defer l.rdMu.Unlock()
 
 	l.tmpBuf = make([]byte, bufLen)
-	readLen, err := fd.Read(tmpBuf)
+	readLen, err := fd.Read(l.tmpBuf)
 	if err != nil {
 		fd.Close()
 		lPLGErr(l.groupIdx, "readlen %d not qual to %d", readLen, bufLen)
@@ -437,14 +437,14 @@ func (l *logStore) read(sFileID string) ([]byte, uint64, error) {
 
 	fd.Close()
 
-	if fileChecksum := crc(0, tmpBuf); fileChecksum != checksum {
+	if fileChecksum := crc(0, l.tmpBuf); fileChecksum != checksum {
 		getBPInstance().GetFileChecksumNotEqual()
 		lPLGErr(l.groupIdx, "checksum not equal, filechecksum %d checksum %d", fileChecksum, checksum)
 		return nil, 0, errChecksumNotMatch
 	}
 
-	instanceID := binary.LittleEndian.Uint64(tmpBuf)
-	buf := tmpBuf[8:]
+	instanceID := binary.LittleEndian.Uint64(l.tmpBuf)
+	buf := l.tmpBuf[8:]
 	lPLGImp(l.groupIdx, "ok, fileid %d offset %d instanceid %d buffer size %d",
 		fileID, offset, instanceID, bufLen-8)
 

@@ -316,7 +316,7 @@ func (n *node) init(opt *Options) error {
 	}
 
 	if err != nil {
-		lPLErr("initLogStorage fail, error: %v", err)
+		lPLErr("init group fail, error: %v", err)
 		return err
 	}
 

@@ -6,6 +6,8 @@ import (
 	"github.com/buptmiao/gopaxos"
 	"github.com/pkg/errors"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
@@ -32,7 +34,7 @@ func (e *echoSM) SMID() int64 {
 }
 
 func (e *echoSM) Execute(groupIdx int, instanceID uint64, paxosValue []byte, smCtx *gopaxos.SMCtx) bool {
-	fmt.Printf("[SM Execute] ok, smid %d instanceid %d value %s\n",
+	Log.Printf("[SM Execute] ok, smid %d instanceid %d value %s\n",
 		e.SMID(), instanceID, string(paxosValue))
 
 	if smCtx != nil && smCtx.Ctx != nil {
@@ -120,6 +122,7 @@ func (e *echoServer) RunPaxos() error {
 	opt.MyNode = e.myNode
 	opt.NodeInfoList = e.nodeList
 	opt.LogLevel = gopaxos.LogLevel_Info
+	//opt.UseMembership = true
 
 	smInfo := gopaxos.NewGroupInfo()
 
@@ -160,7 +163,6 @@ func (e *echoServer) Echo(value []byte) ([]byte, error) {
 	}
 
 	resp := echosmCtx.echoRespValue
-
 	return resp, nil
 }
 
@@ -196,6 +198,9 @@ func parseIpPortList(nodeListStr string) gopaxos.NodeInfoList {
 }
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	nodeListStr := flag.String("members", "", "cluster members ip:port list")
 	myNodeStr := flag.String("addr", ":15000", "local ip:port")
 	flag.Parse()

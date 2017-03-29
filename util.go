@@ -140,16 +140,15 @@ func (s *serialLock) wait() {
 }
 
 func (s *serialLock) interrupt() {
-	s.mu.Lock()
-	s.c <- struct{}{}
-	s.mu.Unlock()
+	close(s.c)
+	s.c = make(chan struct{})
 }
 
 func (s *serialLock) broadcast() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	close(s.c)
 	s.c = make(chan struct{})
+	s.mu.Unlock()
 }
 
 // timeout return false.
@@ -375,11 +374,12 @@ func (t *timer) popTimeout() (uint32, timerType, bool) {
 		return 0, 0, false
 	}
 
-	obj := heap.Pop(t).(*timerObj)
+	obj := t.timerHeap[0]
 	now := getSteadyClockMS()
 	if obj.absTime > now {
 		return 0, 0, false
 	}
+	heap.Pop(t)
 	return obj.timerID, obj.typ, true
 }
 
