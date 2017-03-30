@@ -144,6 +144,8 @@ func (s *systemVSM) membershipOPValue(nodeList NodeInfoList, version uint64) ([]
 
 func (s *systemVSM) createGidOPValue(gid uint64) ([]byte, error) {
 	sysVar := &paxospb.SystemVariables{}
+	sysVar.MemberShip = s.sysVar.GetMemberShip()
+	sysVar.Version = s.sysVar.GetVersion()
 	sysVar.Gid = gid
 
 	bytes, err := sysVar.Marshal()

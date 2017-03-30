@@ -588,7 +588,6 @@ func (i *instance) getNowInstanceID() uint64 {
 func (i *instance) onTimeout(timerID uint32, typ timerType) {
 	switch typ {
 	case timer_Proposer_Prepare_Timeout:
-		lPLErr("here********** %d", typ)
 		i.proposer.onPrepareTimeout()
 	case timer_Proposer_Accept_Timeout:
 		i.proposer.onAcceptTimeout()

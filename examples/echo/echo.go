@@ -122,7 +122,7 @@ func (e *echoServer) RunPaxos() error {
 	opt.MyNode = e.myNode
 	opt.NodeInfoList = e.nodeList
 	opt.LogLevel = gopaxos.LogLevel_Info
-	//opt.UseMembership = true
+	opt.UseMembership = true
 
 	smInfo := gopaxos.NewGroupInfo()
 
