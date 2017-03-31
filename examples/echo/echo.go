@@ -198,12 +198,14 @@ func parseIpPortList(nodeListStr string) gopaxos.NodeInfoList {
 }
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 	nodeListStr := flag.String("members", "", "cluster members ip:port list")
 	myNodeStr := flag.String("addr", ":15000", "local ip:port")
+	debugAddr := flag.String("debug", ":6060", "local ip:port")
 	flag.Parse()
+
+	go func() {
+		log.Println(http.ListenAndServe(*debugAddr, nil))
+	}()
 
 	myNode := parseIpPort(*myNodeStr)
 	nodeList := parseIpPortList(*nodeListStr)

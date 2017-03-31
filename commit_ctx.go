@@ -80,6 +80,7 @@ func (c *commitCtx) setResultOnlyRet(commitRet int32) {
 func (c *commitCtx) setResult(commitRet int32, instanceID uint64, learnValue []byte) {
 	c.slock.lock()
 	if c.isCommitEnd || c.instanceID != instanceID {
+		c.slock.unlock()
 		return
 	}
 

@@ -552,7 +552,7 @@ func (i *instance) receiveMsgForLearner(paxosMsg *paxospb.PaxosMsg) error {
 			i.commitTimerID = i.loop.removeTimer(i.commitTimerID)
 		}
 
-		lPLGHead(i.conf.groupIdx, "[Learned] New paxos starting, Now.Proposer.InstanceID %d"+
+		lPLGHead(i.conf.groupIdx, "[Learned] New paxos starting, Now.Proposer.InstanceID %d, "+
 			"Now.Acceptor.InstanceID %d Now.Learner.InstanceID %d",
 			i.proposer.getInstanceID(), i.acceptor.getInstanceID(), i.learner.getInstanceID())
 

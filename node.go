@@ -330,6 +330,7 @@ func (n *node) init(opt *Options) error {
 	n.runMaster(opt)
 	n.runProposeBatch()
 
+	nw.RunNetWork()
 	lPLHead("OK")
 
 	return nil
