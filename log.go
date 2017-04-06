@@ -42,66 +42,76 @@ func (l *logger) SetLogFunc(logFunc LogFunc) {
 }
 
 func (l *logger) LogError(format string, args ...interface{}) {
-	newFormat := "\033[41;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
+		newFormat := "\033[41;37m " + format + " \033[0m\n"
 		l.logFunc(LogLevel_Error, newFormat, args...)
 		return
 	}
+
 	if l.logLevel < LogLevel_Error {
 		return
 	}
 
+	newFormat := "\033[41;37m " + format + " \033[0m\n"
 	fmt.Printf(newFormat, args...)
 }
 
 func (l *logger) LogStatus(format string, args ...interface{}) {
-	newFormat := format + "\n"
 	if l.logFunc != nil {
+		newFormat := format + "\n"
 		l.logFunc(LogLevel_Verbose, newFormat, args...)
 		return
 	}
 	if l.logLevel < LogLevel_Verbose {
 		return
 	}
+
+	newFormat := format + "\n"
 	fmt.Printf(newFormat, args...)
 }
 
 func (l *logger) LogWarning(format string, args ...interface{}) {
-	newFormat := "\033[44;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
+		newFormat := "\033[44;37m " + format + " \033[0m\n"
 		l.logFunc(LogLevel_Warning, newFormat, args...)
 		return
 	}
+
 	if l.logLevel < LogLevel_Warning {
 		return
 	}
 
+	newFormat := "\033[44;37m " + format + " \033[0m\n"
 	fmt.Printf(newFormat, args...)
 }
 
 func (l *logger) LogInfo(format string, args ...interface{}) {
-	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
+		newFormat := "\033[45;37m " + format + " \033[0m\n"
 		l.logFunc(LogLevel_Info, newFormat, args...)
 		return
 	}
+
 	if l.logLevel < LogLevel_Info {
 		return
 	}
 
+	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	fmt.Printf(newFormat, args...)
 }
 
 func (l *logger) LogVerbose(format string, args ...interface{}) {
-	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	if l.logFunc != nil {
+		newFormat := "\033[45;37m " + format + " \033[0m\n"
 		l.logFunc(LogLevel_Verbose, newFormat, args...)
 		return
 	}
+
 	if l.logLevel < LogLevel_Verbose {
 		return
 	}
 
+	newFormat := "\033[45;37m " + format + " \033[0m\n"
 	fmt.Printf(newFormat, args...)
 }
 
