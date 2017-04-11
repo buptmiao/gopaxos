@@ -701,7 +701,7 @@ func (n *node) SetBatchDelayTimeMs(groupIdx int, batchDelayTimeMs int) {
 }
 
 func (n *node) stop() {
-	//1.step: must stop master(app) f irst.
+	//1.step: must stop master(app) first.
 	for _, m := range n.masterList {
 		m.stopMaster()
 	}
@@ -714,7 +714,7 @@ func (n *node) stop() {
 	//3.step: stop network.
 	n.network.StopNetWork()
 
-	//4.step: delete paxos instance. 析构
+	//4.step: delete paxos instance.
 	for _, g := range n.groupList {
 		g.stop()
 	}

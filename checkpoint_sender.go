@@ -137,12 +137,6 @@ func (c *checkpointSender) sendCheckpoint() {
 		return
 	}
 
-	err = c.learner.sendCheckpointBegin(c.sendNodeID, c.uuid, c.sequence, c.smFac.getCheckpointInstanceID(c.conf.groupIdx))
-	if err != nil {
-		lPLGErr(c.conf.groupIdx, "SendCheckpointBegin fail, error: %v", err)
-		return
-	}
-
 	getBPInstance().SendCheckpointBegin()
 
 	c.sequence++

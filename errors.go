@@ -78,7 +78,7 @@ var RetErrMap map[int32]error = map[int32]error{
 	int32(paxos_SystemError):                           errPaxosSystemError,
 	int32(paxos_GroupIdxWrong):                         errGroupIdxWrong,
 	int32(paxos_MembershipOp_GidNotSame):               errMembershipOpGidNotSame,
-	int32(paxos_MembershipOp_VersionConflict):           errMembershipOpVersionConflict,
+	int32(paxos_MembershipOp_VersionConflict):          errMembershipOpVersionConflict,
 	int32(paxos_MembershipOp_NoGid):                    errMembershipOpNoGid,
 	int32(paxos_MembershipOp_Add_NodeExist):            errMembershipOpNodeExists,
 	int32(paxos_MembershipOp_Remove_NodeNotExist):      errMembershipOpRemoveNodeNotExists,

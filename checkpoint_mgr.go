@@ -74,7 +74,7 @@ func (c *checkpointMgr) prepareForAskForCheckpoint(sendNodeID uint64) error {
 	}
 
 	now := getSteadyClockMS()
-	if now > c.lastAskForCheckpointTime + 60000 {
+	if now > c.lastAskForCheckpointTime+60000 {
 		lPLGImp(c.conf.groupIdx, "no majority reply, just ask for checkpoint")
 	} else {
 		if len(c.needAckSet) < c.conf.getMajorityCount() {

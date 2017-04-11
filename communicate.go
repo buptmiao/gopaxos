@@ -234,7 +234,7 @@ func (t *tcpTransport) addMessage(ip string, port int, msg []byte) error {
 }
 
 func (t *tcpTransport) sendMessage(ip string, port int, msg []byte) {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), time.Second * 3)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), time.Second*3)
 	if err != nil {
 		lPLErr("dial to remote error: %v", err)
 		return
@@ -354,7 +354,7 @@ func (t *udpTransport) addMessage(ip string, port int, msg []byte) error {
 }
 
 func (t *udpTransport) sendMessage(ip string, port int, msg []byte) {
-	conn, err := net.DialTimeout("udp", fmt.Sprintf("%s:%d", ip, port), time.Second * 3)
+	conn, err := net.DialTimeout("udp", fmt.Sprintf("%s:%d", ip, port), time.Second*3)
 	if err != nil {
 		lPLErr("dial to remote error: %v", err)
 		return
