@@ -13,7 +13,7 @@ func TestDBBaseFunctions(t *testing.T) {
 	if err := db.init(dbpath, groupIdx); err != nil {
 		panic(err)
 	}
-	sFileID, err := db.valueToFileID(writeOptions(true), 1234, []byte{1, 2, 3})
+	sFileID, err := db.valueToFileID(WriteOptions(true), 1234, []byte{1, 2, 3})
 	if err != nil {
 		panic(err)
 	}

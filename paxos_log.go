@@ -14,7 +14,7 @@ func newPaxosLog(ls LogStorage) *paxosLog {
 	}
 }
 
-func (p *paxosLog) writeLog(wo writeOptions, groupIdx int, instanceID uint64, value []byte) error {
+func (p *paxosLog) writeLog(wo WriteOptions, groupIdx int, instanceID uint64, value []byte) error {
 	state := &paxospb.AcceptorStateData{}
 	state.InstanceID = instanceID
 	state.AcceptedValue = value
@@ -50,7 +50,7 @@ func (p *paxosLog) readLog(groupIdx int, instanceID uint64) ([]byte, error) {
 	return value, nil
 }
 
-func (p *paxosLog) writeState(wo writeOptions, groupIdx int, instanceID uint64, state *paxospb.AcceptorStateData) error {
+func (p *paxosLog) writeState(wo WriteOptions, groupIdx int, instanceID uint64, state *paxospb.AcceptorStateData) error {
 	value, err := state.Marshal()
 	if err != nil {
 		lPLGErr(groupIdx, "State.Marshal fail, error: %v", err)

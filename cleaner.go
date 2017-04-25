@@ -155,7 +155,7 @@ func (c *cleaner) fixMinChosenInstanceID(oldMinChosenInstanceID uint64) error {
 }
 
 func (c *cleaner) deleteOne(instanceID uint64) bool {
-	wo := writeOptions(false)
+	wo := WriteOptions(false)
 
 	if err := c.logStorage.Del(wo, c.conf.groupIdx, instanceID); err != nil {
 		return false

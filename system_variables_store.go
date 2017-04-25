@@ -14,7 +14,7 @@ func newSystemVariableStore(ls LogStorage) *systemVariableStore {
 	}
 }
 
-func (s *systemVariableStore) write(wo writeOptions, groupIdx int, sysVar *paxospb.SystemVariables) error {
+func (s *systemVariableStore) write(wo WriteOptions, groupIdx int, sysVar *paxospb.SystemVariables) error {
 	value, err := sysVar.Marshal()
 	if err != nil {
 		lPLGErr(groupIdx, "Variables.Marshal fail")

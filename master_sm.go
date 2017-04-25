@@ -222,7 +222,7 @@ func (m *masterStateMachine) updateMasterToStore(masterNodeID uint64, version ui
 	value.Version = version
 	value.LeaseTime = leaseTime
 
-	wo := writeOptions(true)
+	wo := WriteOptions(true)
 
 	return m.mvStore.write(wo, m.groupIdx, value)
 }

@@ -713,7 +713,7 @@ func (l *learnerState) learnValue(instanceID uint64, learnedBallot *ballotNumber
 	state.AcceptedNodeID = learnedBallot.nodeID
 	state.Checksum = l.newChecksum
 
-	wo := writeOptions(false)
+	wo := WriteOptions(false)
 
 	if err := l.paxosLog.writeState(wo, l.conf.getMyGroupIdx(), instanceID, state); err != nil {
 		lPLGErr(l.conf.groupIdx, "LogStorage.WriteLog fail, InstanceID %d ValueLen %d, error: %v",

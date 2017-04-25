@@ -244,7 +244,7 @@ func (a *acceptorState) persist(instanceID uint64, lastChecksum uint32) error {
 	state.AcceptedValue = a.acceptedValue
 	state.Checksum = a.checksum
 
-	wo := writeOptions(a.conf.getLogSync())
+	wo := WriteOptions(a.conf.getLogSync())
 
 	if wo {
 		a.syncTimes++

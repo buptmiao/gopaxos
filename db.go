@@ -120,7 +120,7 @@ func (d *db) clearAllLog() error {
 		return err
 	}
 
-	wo := writeOptions(true)
+	wo := WriteOptions(true)
 	if systemVar != nil {
 		err = d.setSystemVariables(wo, systemVar)
 		if err != nil {
@@ -263,7 +263,7 @@ func (d *db) get(instanceID uint64) ([]byte, error) {
 	return value, nil
 }
 
-func (d *db) valueToFileID(wo writeOptions, instanceID uint64, value []byte) (string, error) {
+func (d *db) valueToFileID(wo WriteOptions, instanceID uint64, value []byte) (string, error) {
 	sFileID, err := d.valueStore.append(wo, instanceID, value)
 	if err != nil {
 		getBPInstance().ValueToFileIDFail()
@@ -301,7 +301,7 @@ func (d *db) putToLevelDB(sync bool, instanceID uint64, value []byte) error {
 	return nil
 }
 
-func (d *db) put(wo writeOptions, instanceID uint64, value []byte) error {
+func (d *db) put(wo WriteOptions, instanceID uint64, value []byte) error {
 	if !d.hasInit {
 		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
@@ -315,7 +315,7 @@ func (d *db) put(wo writeOptions, instanceID uint64, value []byte) error {
 	return d.putToLevelDB(false, instanceID, []byte(sFileID))
 }
 
-func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
+func (d *db) forceDel(wo WriteOptions, instanceID uint64) error {
 	if !d.hasInit {
 		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
@@ -351,7 +351,7 @@ func (d *db) forceDel(wo writeOptions, instanceID uint64) error {
 	return nil
 }
 
-func (d *db) del(wo writeOptions, instanceID uint64) error {
+func (d *db) del(wo WriteOptions, instanceID uint64) error {
 	if !d.hasInit {
 		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
@@ -458,7 +458,7 @@ func (d *db) getMinChosenInstanceID() (uint64, error) {
 	return minInstanceID, nil
 }
 
-func (d *db) setMinChosenInstanceID(wo writeOptions, minInstanceID uint64) error {
+func (d *db) setMinChosenInstanceID(wo WriteOptions, minInstanceID uint64) error {
 	if !d.hasInit {
 		lPLGErr(d.groupIdx, "no init yet")
 		return errDBNotInit
@@ -480,7 +480,7 @@ func (d *db) getSystemVariables() ([]byte, error) {
 	return d.getFromLevelDB(getSystemVariablesKey)
 }
 
-func (d *db) setSystemVariables(wo writeOptions, value []byte) error {
+func (d *db) setSystemVariables(wo WriteOptions, value []byte) error {
 	return d.putToLevelDB(true, setSystemVariablesKey, value)
 }
 
@@ -488,7 +488,7 @@ func (d *db) getMasterVariables() ([]byte, error) {
 	return d.getFromLevelDB(getMasterVariablesKey)
 }
 
-func (d *db) setMasterVariables(wo writeOptions, value []byte) error {
+func (d *db) setMasterVariables(wo WriteOptions, value []byte) error {
 	return d.putToLevelDB(true, setMasterVariablesKey, value)
 }
 
@@ -566,7 +566,7 @@ func (m *multiDatabase) Get(groupIdx int, instanceID uint64) ([]byte, error) {
 	return m.dbList[groupIdx].get(instanceID)
 }
 
-func (m *multiDatabase) Put(wo writeOptions, groupIdx int, instanceID uint64, value []byte) error {
+func (m *multiDatabase) Put(wo WriteOptions, groupIdx int, instanceID uint64, value []byte) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}
@@ -574,7 +574,7 @@ func (m *multiDatabase) Put(wo writeOptions, groupIdx int, instanceID uint64, va
 	return m.dbList[groupIdx].put(wo, instanceID, value)
 }
 
-func (m *multiDatabase) Del(wo writeOptions, groupIdx int, instanceID uint64) error {
+func (m *multiDatabase) Del(wo WriteOptions, groupIdx int, instanceID uint64) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}
@@ -582,7 +582,7 @@ func (m *multiDatabase) Del(wo writeOptions, groupIdx int, instanceID uint64) er
 	return m.dbList[groupIdx].del(wo, instanceID)
 }
 
-func (m *multiDatabase) forceDel(wo writeOptions, groupIdx int, instanceID uint64) error {
+func (m *multiDatabase) forceDel(wo WriteOptions, groupIdx int, instanceID uint64) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}
@@ -598,7 +598,7 @@ func (m *multiDatabase) GetMaxInstanceID(groupIdx int) (uint64, error) {
 	return m.dbList[groupIdx].getMaxInstanceID()
 }
 
-func (m *multiDatabase) SetMinChosenInstanceID(wo writeOptions, groupIdx int, minInstanceID uint64) error {
+func (m *multiDatabase) SetMinChosenInstanceID(wo WriteOptions, groupIdx int, minInstanceID uint64) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}
@@ -622,7 +622,7 @@ func (m *multiDatabase) ClearAllLog(groupIdx int) error {
 	return m.dbList[groupIdx].clearAllLog()
 }
 
-func (m *multiDatabase) SetSystemVariables(wo writeOptions, groupIdx int, value []byte) error {
+func (m *multiDatabase) SetSystemVariables(wo WriteOptions, groupIdx int, value []byte) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}
@@ -638,7 +638,7 @@ func (m *multiDatabase) GetSystemVariables(groupIdx int) ([]byte, error) {
 	return m.dbList[groupIdx].getSystemVariables()
 }
 
-func (m *multiDatabase) SetMasterVariables(wo writeOptions, groupIdx int, value []byte) error {
+func (m *multiDatabase) SetMasterVariables(wo WriteOptions, groupIdx int, value []byte) error {
 	if groupIdx >= len(m.dbList) {
 		return ErrGroupIdxOutOfRange
 	}

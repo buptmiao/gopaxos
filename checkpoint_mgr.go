@@ -106,7 +106,7 @@ func (c *checkpointMgr) getMinChosenInstanceID() uint64 {
 }
 
 func (c *checkpointMgr) setMinChosenInstanceID(minChosenInstanceID uint64) error {
-	wo := writeOptions(true)
+	wo := WriteOptions(true)
 	if err := c.logStorage.SetMinChosenInstanceID(wo, c.conf.groupIdx, minChosenInstanceID); err != nil {
 		return err
 	}

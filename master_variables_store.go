@@ -12,7 +12,7 @@ func newMasterVariableStore(ls LogStorage) *masterVariableStore {
 	}
 }
 
-func (m *masterVariableStore) write(wo writeOptions, groupIdx int, mVar *paxospb.MasterVariables) error {
+func (m *masterVariableStore) write(wo WriteOptions, groupIdx int, mVar *paxospb.MasterVariables) error {
 	value, err := mVar.Marshal()
 	if err != nil {
 		lPLGErr(groupIdx, "Variables.Marshal fail")

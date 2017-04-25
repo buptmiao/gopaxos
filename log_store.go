@@ -326,7 +326,7 @@ func (l *logStore) getFileID(size int) (*os.File, int64, int64, error) {
 	return l.fd, l.fileID, offset, nil
 }
 
-func (l *logStore) append(wo writeOptions, instanceID uint64, buf []byte) (string, error) {
+func (l *logStore) append(wo WriteOptions, instanceID uint64, buf []byte) (string, error) {
 	l.timeStat.point()
 	l.mu.Lock()
 	defer l.mu.Unlock()

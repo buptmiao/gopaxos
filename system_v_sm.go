@@ -53,7 +53,7 @@ func (s *systemVSM) init() error {
 }
 
 func (s *systemVSM) updateSystemVariables(sysVar *paxospb.SystemVariables) error {
-	wo := writeOptions(true)
+	wo := WriteOptions(true)
 
 	if err := s.sysVStore.write(wo, s.groupIdx, sysVar); err != nil {
 		lPLGErr(s.groupIdx, "SystemVStore::Write fail, ret %v", err)
